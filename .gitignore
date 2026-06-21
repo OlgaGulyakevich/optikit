@@ -9,3 +9,7 @@ notes/
 
 # macOS
 .DS_Store
+
+# Local test assets (manual smoke testing) — keep the folder doc, ignore the media
+samples/*
+!samples/README.md
