@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Build and Output
+dist/
+
+# Notes
+notes/
+
+# macOS
+.DS_Store
