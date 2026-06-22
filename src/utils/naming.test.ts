@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildImageJobs, commonBaseDir } from './naming.js';
+import { buildImageJobs, buildOgJobs, commonBaseDir } from './naming.js';
 
 const opts = { inputBase: 'assets', outDir: 'optimized', quality: 80 };
 
@@ -76,5 +76,28 @@ describe('commonBaseDir', () => {
 
   it('returns "." for an empty list', () => {
     expect(commonBaseDir([])).toBe('.');
+  });
+});
+
+describe('buildOgJobs', () => {
+  it('makes a 1200×630 cover JPEG named *-og.jpg', () => {
+    expect(buildOgJobs(['assets/hero.png'], { inputBase: 'assets', outDir: 'og', quality: 80 })).toEqual([
+      {
+        input: 'assets/hero.png',
+        output: 'og/hero-og.jpg',
+        format: 'jpeg',
+        quality: 80,
+        resize: { width: 1200, height: 630, fit: 'cover' },
+      },
+    ]);
+  });
+
+  it('mirrors structure and ignores non-raster inputs', () => {
+    const outputs = buildOgJobs(['pages/blog/post.jpg', 'pages/icon.svg'], {
+      inputBase: 'pages',
+      outDir: 'og',
+      quality: 80,
+    }).map((job) => job.output);
+    expect(outputs).toEqual(['og/blog/post-og.jpg']);
   });
 });

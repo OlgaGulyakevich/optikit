@@ -113,6 +113,32 @@ export const buildImageJobs = (
   return jobs;
 };
 
+/** Options for og jobs — a subset of the image options (no retina/avif). */
+export type OgNamingOptions = Pick<ImageNamingOptions, 'inputBase' | 'outDir' | 'quality'>;
+
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 630;
+
+/**
+ * Plan og-image jobs: each raster input → a 1200×630 `cover` JPEG named
+ * `<name>-og.jpg`, mirroring the input structure under the out dir.
+ */
+export const buildOgJobs = (inputs: readonly string[], opts: OgNamingOptions): SharpJob[] => {
+  const jobs: SharpJob[] = [];
+  for (const input of inputs) {
+    if (!RASTER.test(input)) continue;
+    const stem = basename(input, extname(input));
+    jobs.push({
+      input,
+      output: outPath(input, `${stem}-og.jpg`, opts),
+      format: 'jpeg',
+      quality: opts.quality,
+      resize: { width: OG_WIDTH, height: OG_HEIGHT, fit: 'cover' },
+    });
+  }
+  return jobs;
+};
+
 /**
  * Longest common parent directory of `files` — the base for mirroring the input
  * structure under the out dir. Returns '.' when the files share no parent.

@@ -4,9 +4,12 @@ import type { Tool, ToolResult } from '../core/tool.js';
 /** Output formats the sharp engine can produce in optikit. */
 export type SharpFormat = 'webp' | 'avif' | 'png' | 'jpeg';
 
+/** How an absolute resize fits the target box (sharp `fit`). */
+export type ResizeFit = 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+
 /**
- * One sharp operation: read `input`, optionally downscale, encode to `format`
- * at `quality`, write to `output`.
+ * One sharp operation: read `input`, optionally resize, encode to `format` at
+ * `quality`, write to `output`. `scale` and `resize` are mutually exclusive.
  */
 export interface SharpJob {
   input: string;
@@ -15,6 +18,8 @@ export interface SharpJob {
   quality: number;
   /** Downscale factor, e.g. 0.5 for @2x → @1x. Omit (or 1) to keep original size. */
   scale?: number;
+  /** Absolute target box, e.g. og 1200×630 with `fit: 'cover'`. */
+  resize?: { width: number; height: number; fit?: ResizeFit };
 }
 
 /**
@@ -26,7 +31,9 @@ export class SharpTool implements Tool<SharpJob> {
   async run(job: SharpJob): Promise<ToolResult> {
     const pipeline = sharp(job.input);
 
-    if (job.scale && job.scale !== 1) {
+    if (job.resize) {
+      pipeline.resize(job.resize.width, job.resize.height, { fit: job.resize.fit });
+    } else if (job.scale && job.scale !== 1) {
       const { width } = await pipeline.metadata();
       if (width) {
         pipeline.resize(Math.round(width * job.scale));
