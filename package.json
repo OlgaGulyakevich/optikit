@@ -15,7 +15,8 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint ."
   },
   "keywords": [
@@ -39,6 +40,7 @@
     "png-to-ico": "^3.0.1",
     "sharp": "^0.35.2",
     "svgo": "^4.0.1",
+    "tinyglobby": "^0.2.17",
     "zod": "^4.4.3"
   },
   "devDependencies": {

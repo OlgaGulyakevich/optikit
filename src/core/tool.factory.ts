@@ -1,4 +1,5 @@
 import type { Engine, Tool } from './tool.js';
+import { SharpTool } from '../tools/sharp.tool.js';
 
 /** Lazily creates a concrete tool for one engine. */
 type ToolFactory = () => Tool<unknown>;
@@ -10,10 +11,10 @@ type ToolFactory = () => Tool<unknown>;
  * `Partial` because not every engine is wired up yet.
  */
 const registry: Partial<Record<Engine, ToolFactory>> = {
-  // sharp:  () => new SharpTool(),   
-  // ffmpeg: () => new FfmpegTool(),  
-  // svgo:   () => new SvgoTool(),    
-  // ico:    () => new IcoTool(),     
+  sharp: () => new SharpTool(),
+  // ffmpeg: () => new FfmpegTool(),  // Phase 2
+  // svgo:   () => new SvgoTool(),    // Phase 3
+  // ico:    () => new IcoTool(),     // Phase 3
 };
 
 /**

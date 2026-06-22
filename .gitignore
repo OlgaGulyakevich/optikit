@@ -13,3 +13,6 @@ notes/
 # Local test assets (manual smoke testing) — keep the folder doc, ignore the media
 samples/*
 !samples/README.md
+
+# CLI output from local runs
+/optimized/

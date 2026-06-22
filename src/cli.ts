@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
+import type { CliCommand } from './core/command.js';
+import { logger } from './core/logger.js';
+import { imgCommand } from './commands/img/img.command.js';
 
 // Read our own version at runtime (single source of truth = package.json).
 // `import.meta.url` is the ESM way to locate files relative to this module
@@ -21,6 +24,15 @@ program
   .description('Optimize web assets — images, video, og-image, favicon, svg.')
   .version(version, '-v, --version', 'output the current version');
 
-// Commands (img, og, video, svg, favicon) get registered here as they land.
+// Command registry — add a command here and it is wired up uniformly.
+const commands: CliCommand[] = [imgCommand];
+for (const command of commands) {
+  command.register(program);
+}
 
-program.parse();
+try {
+  await program.parseAsync();
+} catch (error) {
+  logger.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}
