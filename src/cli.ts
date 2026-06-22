@@ -5,6 +5,7 @@ import type { CliCommand } from './core/command.js';
 import { logger } from './core/logger.js';
 import { imgCommand } from './commands/img/img.command.js';
 import { ogCommand } from './commands/og/og.command.js';
+import { videoCommand } from './commands/video/video.command.js';
 
 // Read our own version at runtime (single source of truth = package.json).
 // `import.meta.url` is the ESM way to locate files relative to this module
@@ -26,7 +27,7 @@ program
   .version(version, '-v, --version', 'output the current version');
 
 // Command registry — add a command here and it is wired up uniformly.
-const commands: CliCommand[] = [imgCommand, ogCommand];
+const commands: CliCommand[] = [imgCommand, ogCommand, videoCommand];
 for (const command of commands) {
   command.register(program);
 }

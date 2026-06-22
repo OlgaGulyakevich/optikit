@@ -1,52 +1,51 @@
 import { spawn } from 'node:child_process';
+import { rm } from 'node:fs/promises';
 import type { Tool, ToolResult } from '../core/tool.js';
 
-/** Web video container/codec the ffmpeg engine targets. */
-export type VideoFormat = 'mp4' | 'webm';
-
-/** One ffmpeg operation: transcode `input` → `output` with the given settings. */
-export interface FfmpegJob {
+interface FfmpegBase {
   input: string;
   output: string;
-  format: VideoFormat;
-  /** Constant Rate Factor — quality knob (lower = better quality, larger file). */
-  crf: number;
   /** Cap output width to this many px (keeps aspect, never upscales). */
   maxWidth?: number;
   /** Drop the audio track. */
   mute?: boolean;
 }
 
-const videoCodec = (format: VideoFormat): string =>
-  format === 'webm' ? 'libvpx-vp9' : 'libx264';
+/** Quality mode: single-pass CRF (lower = better quality, larger file). */
+export interface CrfJob extends FfmpegBase {
+  crf: number;
+}
 
-const audioCodec = (format: VideoFormat): string =>
-  format === 'webm' ? 'libopus' : 'aac';
+/** Target-size mode: two-pass at a fixed video bitrate (bits/s). */
+export interface BitrateJob extends FfmpegBase {
+  videoBitrate: number;
+}
 
-/** Build ffmpeg CLI args for a single-pass (CRF) transcode. */
-const buildArgs = (job: FfmpegJob): string[] => {
-  const args = ['-y', '-i', job.input, '-c:v', videoCodec(job.format), '-crf', String(job.crf)];
+/** One ffmpeg operation (always outputs web mp4 / H.264). */
+export type FfmpegJob = CrfJob | BitrateJob;
 
-  if (job.format === 'mp4') {
-    args.push('-preset', 'medium', '-pix_fmt', 'yuv420p');
-  } else {
-    args.push('-b:v', '0'); // vp9 constant-quality mode
-  }
+const scaleArgs = (job: FfmpegBase): string[] =>
+  job.maxWidth === undefined ? [] : ['-vf', `scale=min(iw\\,${job.maxWidth}):-2`];
 
-  if (job.maxWidth !== undefined) {
-    // Cap width, keep aspect (height auto, even); the escaped comma protects min().
-    args.push('-vf', `scale=min(iw\\,${job.maxWidth}):-2`);
-  }
+const audioArgs = (job: FfmpegBase): string[] => (job.mute ? ['-an'] : ['-c:a', 'aac']);
 
-  if (job.mute) {
-    args.push('-an');
-  } else {
-    args.push('-c:a', audioCodec(job.format));
-  }
-
-  args.push(job.output);
-  return args;
-};
+/** CLI args for a single-pass (CRF) H.264 mp4 transcode. */
+const buildArgs = (job: CrfJob): string[] => [
+  '-y',
+  '-i',
+  job.input,
+  '-c:v',
+  'libx264',
+  '-crf',
+  String(job.crf),
+  '-preset',
+  'medium',
+  '-pix_fmt',
+  'yuv420p',
+  ...scaleArgs(job),
+  ...audioArgs(job),
+  job.output,
+];
 
 /** Spawn ffmpeg with `args`; resolve on exit code 0, reject otherwise. */
 const runFfmpeg = (args: string[]): Promise<void> =>
@@ -65,6 +64,33 @@ const runFfmpeg = (args: string[]): Promise<void> =>
       }
     });
   });
+
+/** Two-pass encode at a target video bitrate — accurate size control. */
+const runTwoPass = async (job: BitrateJob): Promise<void> => {
+  const passlog = `${job.output}.passlog`;
+  const shared = [
+    '-i',
+    job.input,
+    '-c:v',
+    'libx264',
+    '-b:v',
+    String(job.videoBitrate),
+    '-preset',
+    'medium',
+    '-pix_fmt',
+    'yuv420p',
+    ...scaleArgs(job),
+    '-passlogfile',
+    passlog,
+  ];
+  try {
+    await runFfmpeg(['-y', ...shared, '-pass', '1', '-an', '-f', 'null', '-']);
+    await runFfmpeg(['-y', ...shared, '-pass', '2', ...audioArgs(job), job.output]);
+  } finally {
+    await rm(`${passlog}-0.log`, { force: true });
+    await rm(`${passlog}-0.log.mbtree`, { force: true });
+  }
+};
 
 /** Probe a media file's duration in seconds (via ffprobe). Feeds bitrate math. */
 export const probeDuration = (input: string): Promise<number> =>
@@ -94,12 +120,17 @@ export const probeDuration = (input: string): Promise<number> =>
   });
 
 /**
- * Strategy implementation for video (ffmpeg). Unlike sharp, the work runs in an
- * external process: `spawn` + communication over stderr, wrapped in a Promise.
+ * Strategy implementation for video (ffmpeg → mp4/H.264). Runs in an external
+ * process: `spawn` + stderr, wrapped in a Promise. CRF jobs are single-pass;
+ * bitrate jobs run two passes for accurate target-size control.
  */
 export class FfmpegTool implements Tool<FfmpegJob> {
   async run(job: FfmpegJob): Promise<ToolResult> {
-    await runFfmpeg(buildArgs(job));
+    if ('videoBitrate' in job) {
+      await runTwoPass(job);
+    } else {
+      await runFfmpeg(buildArgs(job));
+    }
     return { outputs: [job.output] };
   }
 }
