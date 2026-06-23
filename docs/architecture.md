@@ -34,9 +34,13 @@ optikit/
 │   │   │   └── img.schema.ts       #   Zod schema for config + inferred type
 │   │   ├── og/
 │   │   ├── video/
+│   │   │   ├── video.command.ts    #   parent — registers convert + compress
 │   │   │   ├── convert.command.ts
 │   │   │   ├── compress.command.ts
-│   │   │   └── video.presets.ts    #   mobile / desktop
+│   │   │   ├── video.schema.ts     #   Zod (shared base + per-command)
+│   │   │   ├── video.presets.ts    #   mobile / desktop ceilings
+│   │   │   ├── resolve-preset.ts   #   preset + flags → config
+│   │   │   └── transcode.ts        #   shared ffmpeg job runner
 │   │   ├── favicon/
 │   │   └── svg/
 │   ├── tools/                      # ── Strategy layer (engines)
@@ -52,9 +56,8 @@ optikit/
 │   │   └── logger.ts               #   output + progress
 │   └── utils/                      # ── pure functions = unit-test target
 │       ├── calc-bitrate.ts         #   size + duration → bitrate
-│       ├── naming.ts               #   @1x / @2x / -og suffixes, output names
+│       ├── naming.ts               #   @1x / @2x suffixes, output paths
 │       ├── parse-size.ts           #   "200mb" → bytes
-│       ├── resolve-preset.ts       #   preset + flags → config
 │       └── *.test.ts               #   tests co-located (Vitest)
 ├── package.json
 ├── tsconfig.json
@@ -70,6 +73,10 @@ optikit/
 | **Command** | `src/commands/*` | `CliCommand` + presets = a task with its settings. |
 | **Generics** | `Tool<Job>`, `z.infer<typeof schema>` | Type-safe config per tool, derived from the validation schema. |
 
+Most commands drive a single engine; `favicon` composes several through the same
+Factory — sharp renders the PNG sizes, png-to-ico packs the `.ico`, and (for an
+SVG source) svgo emits a scalable `favicon.svg`.
+
 ## Key contracts
 
 Contracts are the skeleton of the app: commands and tools are built on top of
@@ -80,7 +87,7 @@ ready-made types, not the other way around.
 export type Engine = 'sharp' | 'ffmpeg' | 'svgo' | 'ico';
 
 export interface ToolResult {
-  outputs: string[]; // paths of generated files
+  readonly outputs: readonly string[]; // paths of generated files
 }
 
 /** Strategy: an engine runs one job. How it runs (spawn / function call) is a tool-internal detail. */
@@ -103,9 +110,11 @@ export interface CliCommand {
 ```ts
 // commands/img/img.schema.ts — config via Zod (type inferred with z.infer)
 export const imgSchema = z.object({
-  input: z.string(),
+  input: z.string().min(1),
+  out: z.string().default('optimized'),
+  quality: z.coerce.number().int().min(1).max(100).default(85),
   avif: z.boolean().default(false),
-  quality: z.number().min(1).max(100).default(85),
+  retina: z.boolean().default(false),
 });
 export type ImgConfig = z.infer<typeof imgSchema>;
 ```
@@ -115,10 +124,10 @@ export type ImgConfig = z.infer<typeof imgSchema>;
 ```text
 argv → commander → CliCommand.run(raw)
   → Zod validate ─────────────→ Config (typed)
-  → utils (resolve-preset / naming / calc-bitrate) → Job[]
-  → factory.create(engine) ───→ Tool (Strategy)
-  → Tool.run(job)  (Promise.all for a batch) → ToolResult
-  → logger (progress + summary + <link> snippet for favicon)
+  → helpers (naming / resolve-preset / calc-bitrate) → Job[]
+  → createTool(engine) ───────→ Tool (Strategy)
+  → Tool.run(job)  (sequentially per job) → ToolResult
+  → logger (per-file result + summary + <link> snippet for favicon)
 ```
 
 ## spawn vs in-process
@@ -132,7 +141,7 @@ needs to know how an engine runs — that is the point of the Strategy pattern.
 
 ## Testing strategy
 
-Tests target the **pure logic** in `src/utils/` (no IO) — bitrate calculation,
-output naming, size parsing, preset resolution — plus the factory (correct `Tool`
-per engine). The engines themselves (sharp, ffmpeg, svgo) are not tested directly:
-that responsibility belongs to the upstream libraries.
+Tests target the **pure logic** (no IO) — output naming & retina rules, common
+base directory, bitrate calculation, size parsing, preset resolution, and Zod
+schema validation. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are
+not unit-tested — that responsibility belongs to the upstream libraries.

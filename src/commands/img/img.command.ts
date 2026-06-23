@@ -1,9 +1,9 @@
-import { dirname } from 'node:path';
+import { dirname, extname } from 'node:path';
 import type { Command as Program } from 'commander';
 import type { CliCommand } from '../../core/command.js';
 import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
-import { collectInputs, ensureDir } from '../../core/file.service.js';
+import { collectInputs, ensureDir, keepSmaller } from '../../core/file.service.js';
 import { buildImageJobs, commonBaseDir } from '../../utils/naming.js';
 import { imgSchema } from './img.schema.js';
 
@@ -46,7 +46,14 @@ export const imgCommand: CliCommand = {
     for (const job of jobs) {
       await ensureDir(dirname(job.output));
       await tool.run(job);
-      logger.success(job.output);
+
+      // keep-smaller only for same-format, same-size re-encodes (e.g. @2x png→png).
+      const isReEncode =
+        extname(job.output) === extname(job.input) &&
+        job.scale === undefined &&
+        job.resize === undefined;
+      const keptOriginal = isReEncode && (await keepSmaller(job.input, job.output));
+      logger.success(keptOriginal ? `${job.output} (kept original — smaller)` : job.output);
     }
 
     logger.info(`Done — ${jobs.length} file(s) written to "${config.out}".`);

@@ -1,4 +1,4 @@
-import { mkdir, stat, unlink } from 'node:fs/promises';
+import { copyFile, mkdir, stat, unlink } from 'node:fs/promises';
 import { glob } from 'tinyglobby';
 
 /**
@@ -35,4 +35,18 @@ export const ensureDir = async (dir: string): Promise<void> => {
 export const collectInputs = async (input: string): Promise<string[]> => {
   const files = await glob(input, { expandDirectories: true, absolute: false });
   return files.sort();
+};
+
+/**
+ * "Never make it worse": if `output` is not smaller than `input`, overwrite it
+ * with a copy of `input`. Only valid when output is a same-format, same-size
+ * re-encode of the source. Returns true if the original was kept.
+ */
+export const keepSmaller = async (input: string, output: string): Promise<boolean> => {
+  const [src, out] = await Promise.all([stat(input), stat(output)]);
+  if (out.size >= src.size) {
+    await copyFile(input, output);
+    return true;
+  }
+  return false;
 };

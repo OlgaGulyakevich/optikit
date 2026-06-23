@@ -4,7 +4,7 @@ import type { CliCommand } from '../../core/command.js';
 import type { SvgoJob } from '../../tools/svgo.tool.js';
 import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
-import { collectInputs, ensureDir } from '../../core/file.service.js';
+import { collectInputs, ensureDir, keepSmaller } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
 import { svgSchema } from './svg.schema.js';
 
@@ -41,7 +41,10 @@ export const svgCommand: CliCommand = {
       const job: SvgoJob = { input, output };
       await ensureDir(dirname(output));
       await tool.run(job);
-      logger.success(output);
+
+      // svg → svg is a same-format re-encode, so keep-smaller always applies.
+      const keptOriginal = await keepSmaller(input, output);
+      logger.success(keptOriginal ? `${output} (kept original — smaller)` : output);
     }
 
     logger.info(`Done — ${files.length} SVG(s) optimized to "${config.out}".`);
