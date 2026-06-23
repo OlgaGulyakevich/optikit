@@ -9,6 +9,20 @@ export default tseslint.config(
   // Basic ESLint rules.
   eslint.configs.recommended,
 
-  // Parser + TypeScript recommended rules.
-  ...tseslint.configs.recommended,
+  // Parser + type-aware TypeScript rules (catches floating promises, unsafe any, ...).
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
+  // This config file is plain JS, not in the TS project — skip type-aware rules.
+  {
+    files: ['**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
+  },
 );
