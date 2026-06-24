@@ -33,6 +33,12 @@
   ],
   "author": "Olga Gulyakevich",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OlgaGulyakevich/optikit.git"
+  },
+  "homepage": "https://github.com/OlgaGulyakevich/optikit#readme",
+  "bugs": "https://github.com/OlgaGulyakevich/optikit/issues",
   "publishConfig": {
     "access": "public"
   },
