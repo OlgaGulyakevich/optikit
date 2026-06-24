@@ -1,5 +1,7 @@
 # optikit
 
+[![CI](https://github.com/OlgaGulyakevich/optikit/actions/workflows/ci.yml/badge.svg)](https://github.com/OlgaGulyakevich/optikit/actions/workflows/ci.yml)
+
 A fast, type-safe **CLI for optimizing web assets** — images, video, OG images,
 SVG, and favicons — built in TypeScript (strict, ESM).
 
