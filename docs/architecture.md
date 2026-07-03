@@ -13,14 +13,16 @@ cli → commands → tools → core / utils
 ```
 
 - **cli** — the entry point: parses arguments and registers commands.
-- **commands** — one task per command (`img`, `og`, `video`, `svg`, `favicon`),
+- **commands** — one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`),
   including presets and input validation.
 - **tools** — the engines that actually do the work (sharp, ffmpeg, svgo, png-to-ico),
   hidden behind a single interface.
 - **core / utils** — shared contracts, services, and pure helper functions.
 
 Extensibility is the design goal: **adding a new engine means adding one new
-strategy in `src/tools/`** — the core never changes.
+strategy in `src/tools/`** — the core never changes. A command that reuses an
+existing engine is even cheaper: `trim`, for example, just adds a `SharpJob.trim`
+option plus a command folder.
 
 ## Folder structure
 
@@ -42,7 +44,8 @@ optikit/
 │   │   │   ├── resolve-preset.ts   #   preset + flags → config
 │   │   │   └── transcode.ts        #   shared ffmpeg job runner
 │   │   ├── favicon/
-│   │   └── svg/
+│   │   ├── svg/
+│   │   └── trim/                   #   trim transparent padding (reuses sharp)
 │   ├── tools/                      # ── Strategy layer (engines)
 │   │   ├── sharp.tool.ts           #   implements Tool<SharpJob>
 │   │   ├── ffmpeg.tool.ts          #   implements Tool<FfmpegJob> (spawn + ffprobe inside)

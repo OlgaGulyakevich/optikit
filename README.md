@@ -106,6 +106,18 @@ site.webmanifest          favicon-snippet.html
 - An **SVG source** also yields a scalable `favicon.svg`.
 - Prints (and saves) a ready-to-paste `<head>` snippet.
 
+### `trim` — crop transparent padding
+
+```bash
+optikit trim ./icons --out ./public/icons
+optikit trim logo.png --threshold 50
+```
+
+- Trims transparent/empty padding from **PNG & WebP** (sharp `.trim()`) — handy for
+  Figma exports with extra whitespace around an icon.
+- Default threshold **120** (aggressive, clears alpha "ghosts"); tune with
+  `--threshold <0–255>`. Flags: `--out`, `--threshold`.
+
 ## Presets (video resolution ceilings)
 
 | Preset | Max width | Resolution |

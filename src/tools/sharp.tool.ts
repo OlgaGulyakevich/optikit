@@ -15,11 +15,14 @@ export interface SharpJob {
   input: string;
   output: string;
   format: SharpFormat;
-  quality: number;
+  /** Encoding quality (1–100). Omit to keep the format with default (near-lossless) encoding. */
+  quality?: number;
   /** Downscale factor, e.g. 0.5 for @2x → @1x. Omit (or 1) to keep original size. */
   scale?: number;
   /** Absolute target box, e.g. og 1200×630 with `fit: 'cover'`. */
   resize?: { width: number; height: number; fit?: ResizeFit };
+  /** Trim transparent padding at this threshold (higher = more aggressive). */
+  trim?: number;
 }
 
 /**
@@ -31,6 +34,10 @@ export class SharpTool implements Tool<SharpJob> {
   async run(job: SharpJob): Promise<ToolResult> {
     const pipeline = sharp(job.input);
 
+    if (job.trim !== undefined) {
+      pipeline.trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: job.trim });
+    }
+
     if (job.resize) {
       pipeline.resize(job.resize.width, job.resize.height, { fit: job.resize.fit });
     } else if (job.scale && job.scale !== 1) {
@@ -40,7 +47,11 @@ export class SharpTool implements Tool<SharpJob> {
       }
     }
 
-    await pipeline.toFormat(job.format, { quality: job.quality }).toFile(job.output);
+    const encoded =
+      job.quality === undefined
+        ? pipeline.toFormat(job.format)
+        : pipeline.toFormat(job.format, { quality: job.quality });
+    await encoded.toFile(job.output);
 
     return { outputs: [job.output] };
   }
