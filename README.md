@@ -3,7 +3,7 @@
 [![CI](https://github.com/OlgaGulyakevich/optikit/actions/workflows/ci.yml/badge.svg)](https://github.com/OlgaGulyakevich/optikit/actions/workflows/ci.yml)
 
 A fast, type-safe **CLI for optimizing web assets** — images, video, OG images,
-SVG, and favicons — built in TypeScript (strict, ESM).
+SVG, favicons, and transparent-padding trim — built in TypeScript (strict, ESM).
 
 One tool, one consistent flow: point it at a file or folder, get web-ready output
 in a separate directory. Source files are never modified.
