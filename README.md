@@ -1,6 +1,11 @@
 # optikit
 
+[![npm](https://img.shields.io/npm/v/@gulyakevich/optikit?logo=npm&color=0A7EA4)](https://www.npmjs.com/package/@gulyakevich/optikit)
 [![CI](https://github.com/OlgaGulyakevich/optikit/actions/workflows/ci.yml/badge.svg)](https://github.com/OlgaGulyakevich/optikit/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/Node-%E2%89%A522-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![License MIT](https://img.shields.io/badge/License-MIT-blue)](#license)
 
 A fast, type-safe **CLI for optimizing web assets** — images, video, OG images,
 SVG, favicons, and transparent-padding trim — built in TypeScript (strict, ESM).
@@ -13,6 +18,13 @@ optikit img ./assets --out ./public/img      # → WebP (+ @1x/@2x), structure m
 optikit video compress hero.mp4 --max 3mb    # → web-sized mp4 under 3 MB
 optikit favicon logo.svg                      # → full favicon set + <link> snippet
 ```
+
+**Real numbers** (from the bundled `samples/`, default settings):
+
+| Command | Input | Output |
+| --- | --- | --- |
+| `img` | 2.35 MB `@2x` PNG photo | **83 KB** WebP `@2x` — 96% smaller (full `@1x`/`@2x` pack in one pass) |
+| `video compress` | 19 MB 4K clip | **0.96 MB** default · **2.9 MB** with `--max 3mb` |
 
 ## Requirements
 
@@ -148,6 +160,20 @@ uniform Command layer. Argv is validated at the boundary with **Zod**; pure logi
 See [docs/architecture.md](docs/architecture.md) for the full design — layers,
 type contracts, and data flow.
 
+## Quality & Engineering
+
+- **TypeScript strict** — `strict` + `noUncheckedIndexedAccess`, ESM, no `any` in the codebase.
+- **Validated at the boundary** — every command's argv goes through a **Zod** schema before
+  any work starts, so bad input fails fast with a readable message instead of deep inside sharp/ffmpeg.
+- **Tested where it matters** — Vitest on the pure logic: output naming (`@1x`/`@2x` rules),
+  2-pass bitrate math, human size parsing (`3mb`), preset resolution, and the argv schema.
+  No tests on thin wrappers around sharp/ffmpeg — those libraries are already tested by their authors.
+- **CI on every push and PR** — `lint → test → build` on Node 22 (GitHub Actions).
+- **Publish gate** — `prepublishOnly` re-runs lint + tests + build, so a broken build
+  can't reach npm.
+- **Safe by design** — sources are never modified; **keep-smaller** means an "optimized"
+  file is discarded if it isn't actually smaller than the original.
+
 ## Roadmap
 
 Ideas for later (not yet implemented):
@@ -159,3 +185,14 @@ Ideas for later (not yet implemented):
 ## License
 
 MIT
+
+## Author
+
+<a href="https://github.com/OlgaGulyakevich"><img src="https://wsrv.nl/?url=github.com/OlgaGulyakevich.png&w=96&h=96&mask=circle" width="48" height="48" alt="Olga Gulyakevich" align="left"></a>
+
+**Olga Gulyakevich** — Frontend Developer
+
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/OlgaGulyakevich)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/olga-gulyakevich-ab166674/)
+
+<br clear="left"/>
