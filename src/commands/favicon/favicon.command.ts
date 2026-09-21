@@ -86,8 +86,10 @@ export const faviconCommand: CliCommand = {
     // 3. SVG source → bonus scalable favicon.svg (optimized via svgo).
     if (isSvgSource) {
       const svgOutput = join(config.out, 'favicon.svg');
+      // No opt-out here: a favicon with a script in it is never intentional.
       const svgJob: SvgoJob = { input: config.input, output: svgOutput };
-      await createTool('svgo').run(svgJob);
+      const { notes } = await createTool('svgo').run(svgJob);
+      notes?.forEach((note) => logger.warn(note));
       logger.success(svgOutput);
     }
 

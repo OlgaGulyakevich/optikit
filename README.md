@@ -97,9 +97,19 @@ optikit video compress hero.mp4 --max 3mb        # hard size budget (2-pass)
 
 ```bash
 optikit svg ./icons --out ./public/icons
+optikit svg ./icons --keep-scripts          # keep interactive/animated SVGs intact
 ```
 
 - Runs svgo's default preset (strips editor cruft, rounds coordinates). Typically **30–70% smaller**.
+- **Executable content is removed by default** — `<script>`, `on*` handlers and
+  `javascript:` links. svgo does not do this on its own, and an optimized SVG
+  usually goes straight onto a page, where an inline `<script>` runs with the
+  page's origin. Each affected file is named in the output, so nothing vanishes
+  silently. Pass `--keep-scripts` if the SVG is meant to be interactive.
+  This is a safe default, **not a sanitizer** — for SVG from an untrusted
+  source, sanitize properly (e.g. DOMPurify) before putting it on a page.
+- A file svgo cannot parse is reported by name and **skipped**; the rest of the
+  batch still runs, and the command exits non-zero so CI notices.
 
 ### `favicon` — full favicon set from one image
 

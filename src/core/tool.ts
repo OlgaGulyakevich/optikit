@@ -10,6 +10,18 @@ export type Engine = 'sharp' | 'ffmpeg' | 'svgo' | 'ico';
 /** Result of running one job: the paths of the files an engine produced. */
 export interface ToolResult {
   readonly outputs: readonly string[];
+  /**
+   * Remarks the engine wants the user to see — e.g. content dropped for safety.
+   * Engines do not log (that is the command layer's job), so this is how they
+   * surface something the caller should know about but that is not a failure.
+   */
+  readonly notes?: readonly string[];
+  /**
+   * The engine changed the content in a way a size-based fallback must not
+   * undo — e.g. it removed executable markup. Callers that would otherwise
+   * restore the smaller original have to leave this output alone.
+   */
+  readonly preserveOutput?: boolean;
 }
 
 /**
