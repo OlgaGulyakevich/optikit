@@ -19,7 +19,7 @@ export const auditSchema = z.object({
     .union([
       z.enum(['full', 'half']).transform((name) => AMOUNTS[name]),
       z.coerce.number().gt(0).max(1),
-    ])
+    ], { error: 'expected full, half, or a number above 0 and up to 1 (e.g. 0.75)' })
     .default(1),
   /** Offsets below this % of the canvas are left alone (even-stroke chevrons land ~0.8%). */
   threshold: z.coerce.number().min(0).max(50).default(1),

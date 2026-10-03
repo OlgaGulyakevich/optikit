@@ -1,4 +1,5 @@
 import { copyFile, mkdir, stat, unlink } from 'node:fs/promises';
+import { isAbsolute } from 'node:path';
 import { glob } from 'tinyglobby';
 
 /**
@@ -31,9 +32,12 @@ export const ensureDir = async (dir: string): Promise<void> => {
 /**
  * Find files matching `input` — a directory (expanded recursively), a glob
  * pattern, or a single file. Sorted for deterministic, stable output.
+ *
+ * Paths come back in the same form they went in: relative stays relative to
+ * cwd, absolute stays absolute (instead of `../../../../private/tmp/…`).
  */
 export const collectInputs = async (input: string): Promise<string[]> => {
-  const files = await glob(input, { expandDirectories: true, absolute: false });
+  const files = await glob(input, { expandDirectories: true, absolute: isAbsolute(input) });
   return files.sort();
 };
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
+import { ZodError } from 'zod';
 import type { CliCommand } from './core/command.js';
 import { logger } from './core/logger.js';
+import { formatIssues } from './utils/format-issues.js';
 import { imgCommand } from './commands/img/img.command.js';
 import { ogCommand } from './commands/og/og.command.js';
 import { videoCommand } from './commands/video/video.command.js';
@@ -47,6 +49,11 @@ for (const command of commands) {
 try {
   await program.parseAsync();
 } catch (error) {
-  logger.error(error instanceof Error ? error.message : String(error));
+  // Bad flags: one line per flag instead of Zod's raw JSON dump.
+  if (error instanceof ZodError) {
+    formatIssues(error.issues).forEach((line) => logger.error(line));
+  } else {
+    logger.error(error instanceof Error ? error.message : String(error));
+  }
   process.exitCode = 1;
 }
