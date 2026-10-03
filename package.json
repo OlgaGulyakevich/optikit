@@ -1,6 +1,6 @@
 {
   "name": "@gulyakevich/optikit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "CLI utility to optimize web assets — images, video (faststart), og-image, favicon, svg, PNG trim — and optically centre icons.",
   "type": "module",
   "bin": {
