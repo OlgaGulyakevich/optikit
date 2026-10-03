@@ -21,8 +21,25 @@ export interface BitrateJob extends FfmpegBase {
   videoBitrate: number;
 }
 
-/** One ffmpeg operation (always outputs web mp4 / H.264). */
-export type FfmpegJob = CrfJob | BitrateJob;
+/**
+ * Faststart-only mode: copy the streams untouched (no re-encode, no quality
+ * loss) and only move the index to the front. Seconds, even for long clips.
+ */
+export interface RemuxJob {
+  input: string;
+  output: string;
+  copy: true;
+}
+
+/** One ffmpeg operation. Encoding jobs output web mp4 / H.264; a remux keeps the codecs. */
+export type FfmpegJob = CrfJob | BitrateJob | RemuxJob;
+
+/**
+ * Move the `moov` index in front of the media data, so a browser can start
+ * playing before the whole file has arrived. ffmpeg's default puts it at the
+ * end — and then every first play waits for a second request to the file's tail.
+ */
+const FASTSTART = ['-movflags', '+faststart'];
 
 const scaleArgs = (job: FfmpegBase): string[] =>
   job.maxWidth === undefined ? [] : ['-vf', `scale=min(iw\\,${job.maxWidth}):-2`];
@@ -44,6 +61,18 @@ const buildArgs = (job: CrfJob): string[] => [
   'yuv420p',
   ...scaleArgs(job),
   ...audioArgs(job),
+  ...FASTSTART,
+  job.output,
+];
+
+/** CLI args for a stream-copy remux: same codecs, index moved to the front. */
+const buildRemuxArgs = (job: RemuxJob): string[] => [
+  '-y',
+  '-i',
+  job.input,
+  '-c',
+  'copy',
+  ...FASTSTART,
   job.output,
 ];
 
@@ -85,7 +114,8 @@ const runTwoPass = async (job: BitrateJob): Promise<void> => {
   ];
   try {
     await runFfmpeg(['-y', ...shared, '-pass', '1', '-an', '-f', 'null', '-']);
-    await runFfmpeg(['-y', ...shared, '-pass', '2', ...audioArgs(job), job.output]);
+    // Pass 1 writes nothing (`-f null`), so faststart only belongs to pass 2.
+    await runFfmpeg(['-y', ...shared, '-pass', '2', ...audioArgs(job), ...FASTSTART, job.output]);
   } finally {
     await rm(`${passlog}-0.log`, { force: true });
     await rm(`${passlog}-0.log.mbtree`, { force: true });
@@ -122,11 +152,14 @@ export const probeDuration = (input: string): Promise<number> =>
 /**
  * Strategy implementation for video (ffmpeg → mp4/H.264). Runs in an external
  * process: `spawn` + stderr, wrapped in a Promise. CRF jobs are single-pass;
- * bitrate jobs run two passes for accurate target-size control.
+ * bitrate jobs run two passes for accurate target-size control; remux jobs
+ * copy the streams as-is. Every output is faststart.
  */
 export class FfmpegTool implements Tool<FfmpegJob> {
   async run(job: FfmpegJob): Promise<ToolResult> {
-    if ('videoBitrate' in job) {
+    if ('copy' in job) {
+      await runFfmpeg(buildRemuxArgs(job));
+    } else if ('videoBitrate' in job) {
       await runTwoPass(job);
     } else {
       await runFfmpeg(buildArgs(job));

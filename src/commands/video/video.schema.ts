@@ -31,3 +31,21 @@ export const compressSchema = videoBaseSchema.extend({
 });
 
 export type CompressConfig = z.infer<typeof compressSchema>;
+
+/** `video faststart` — move the index to the front without re-encoding. */
+export const faststartSchema = z.object({
+  /** Input file, directory, or glob. */
+  input: z.string().min(1),
+  /** Output directory; input sub-structure is mirrored under it. */
+  out: z.string().default('optimized'),
+});
+
+export type FaststartConfig = z.infer<typeof faststartSchema>;
+
+/** `video check` — report atom order; writes nothing. */
+export const checkSchema = z.object({
+  /** Input file, directory, or glob. */
+  input: z.string().min(1),
+});
+
+export type CheckConfig = z.infer<typeof checkSchema>;
