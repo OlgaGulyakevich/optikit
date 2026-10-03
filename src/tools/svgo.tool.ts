@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { optimize } from 'svgo';
 import type { Tool, ToolResult } from '../core/tool.js';
+import { wrapInTranslate, type Point } from '../utils/optical-center.js';
 
 /** One svgo operation: read `input` SVG, optimize, write to `output`. */
 export interface SvgoJob {
@@ -8,6 +9,8 @@ export interface SvgoJob {
   output: string;
   /** Keep executable content instead of stripping it. Default: strip. */
   keepScripts?: boolean;
+  /** Move the whole icon by this many viewBox units; svgo bakes it into the paths. */
+  translate?: Point;
 }
 
 /**
@@ -58,10 +61,11 @@ export class SvgoTool implements Tool<SvgoJob> {
   async run(job: SvgoJob): Promise<ToolResult> {
     const svg = await readFile(job.input, 'utf8');
     const strip = !job.keepScripts;
+    const source = job.translate ? wrapInTranslate(svg, job.translate) : svg;
 
     let data: string;
     try {
-      ({ data } = optimize(svg, {
+      ({ data } = optimize(source, {
         plugins: strip ? ['preset-default', 'removeScripts'] : ['preset-default'],
       }));
     } catch (cause) {

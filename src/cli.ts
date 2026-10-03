@@ -9,6 +9,7 @@ import { videoCommand } from './commands/video/video.command.js';
 import { svgCommand } from './commands/svg/svg.command.js';
 import { faviconCommand } from './commands/favicon/favicon.command.js';
 import { trimCommand } from './commands/trim/trim.command.js';
+import { iconCommand } from './commands/icon/icon.command.js';
 
 // Read our own version at runtime (single source of truth = package.json).
 // `import.meta.url` is the ESM way to locate files relative to this module
@@ -26,11 +27,19 @@ const program = new Command();
 
 program
   .name('optikit')
-  .description('Optimize web assets — images, video, og-image, favicon, svg.')
+  .description('Optimize web assets — images, video, og-image, favicon, svg — and finish icons.')
   .version(version, '-v, --version', 'output the current version');
 
 // Command registry — add a command here and it is wired up uniformly.
-const commands: CliCommand[] = [imgCommand, ogCommand, videoCommand, svgCommand, faviconCommand, trimCommand];
+const commands: CliCommand[] = [
+  imgCommand,
+  ogCommand,
+  videoCommand,
+  svgCommand,
+  faviconCommand,
+  trimCommand,
+  iconCommand,
+];
 for (const command of commands) {
   command.register(program);
 }

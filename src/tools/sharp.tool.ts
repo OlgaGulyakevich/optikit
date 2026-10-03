@@ -56,3 +56,20 @@ export class SharpTool implements Tool<SharpJob> {
     return { outputs: [job.output] };
   }
 }
+
+/**
+ * Rasterize SVG text and return only its alpha plane (one byte per pixel).
+ * Feeds the optical-centre maths, which cares about where the ink is, not its
+ * colour — librsvg draws `currentColor` as black, which is all we need.
+ * The SVG must already carry the pixel `width`/`height` it should render at.
+ */
+export const renderAlpha = async (
+  svg: string,
+): Promise<{ alpha: Uint8Array; width: number; height: number }> => {
+  const { data, info } = await sharp(Buffer.from(svg))
+    .ensureAlpha()
+    .extractChannel('alpha')
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { alpha: new Uint8Array(data), width: info.width, height: info.height };
+};
