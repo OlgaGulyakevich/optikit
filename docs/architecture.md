@@ -1,7 +1,7 @@
 # Architecture — optikit
 
 A CLI utility for optimizing web assets (images, video, OG images, favicons, SVG)
-for front-end workflows. Built in TypeScript (`strict`), ESM-only, distributed as
+and optically centring icons, for front-end workflows. Built in TypeScript (`strict`), ESM-only, distributed as
 an npm package with an `optikit` bin command.
 
 ## Overview
@@ -13,7 +13,7 @@ cli → commands → tools → core / utils
 ```
 
 - **cli** — the entry point: parses arguments and registers commands.
-- **commands** — one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`),
+- **commands** — one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`, `icon`),
   including presets and input validation.
 - **tools** — the engines that actually do the work (sharp, ffmpeg, svgo, png-to-ico),
   hidden behind a single interface.
@@ -22,7 +22,8 @@ cli → commands → tools → core / utils
 Extensibility is the design goal: **adding a new engine means adding one new
 strategy in `src/tools/`** — the core never changes. A command that reuses an
 existing engine is even cheaper: `trim`, for example, just adds a `SharpJob.trim`
-option plus a command folder.
+option plus a command folder; `icon audit` adds `SvgoJob.translate` and reuses
+sharp to rasterize.
 
 ## Folder structure
 
@@ -36,16 +37,23 @@ optikit/
 │   │   │   └── img.schema.ts       #   Zod schema for config + inferred type
 │   │   ├── og/
 │   │   ├── video/
-│   │   │   ├── video.command.ts    #   parent — registers convert + compress
+│   │   │   ├── video.command.ts    #   parent — registers convert, compress, faststart, check
 │   │   │   ├── convert.command.ts
 │   │   │   ├── compress.command.ts
+│   │   │   ├── faststart.command.ts #  stream-copy remux, index to the front
+│   │   │   ├── check.command.ts    #   atom-order gate for CI (exit 1)
+│   │   │   ├── read-atoms.ts       #   file → atom headers (IO adapter)
 │   │   │   ├── video.schema.ts     #   Zod (shared base + per-command)
 │   │   │   ├── video.presets.ts    #   mobile / desktop ceilings
 │   │   │   ├── resolve-preset.ts   #   preset + flags → config
 │   │   │   └── transcode.ts        #   shared ffmpeg job runner
 │   │   ├── favicon/
 │   │   ├── svg/
-│   │   └── trim/                   #   trim transparent padding (reuses sharp)
+│   │   ├── trim/                   #   trim transparent padding (reuses sharp)
+│   │   └── icon/
+│   │       ├── icon.command.ts     #   parent — registers audit
+│   │       ├── audit.command.ts    #   measure → verdict → (--fix) svgo translate → re-measure
+│   │       └── measure.ts          #   SVG file → rendered alpha → ink offset
 │   ├── tools/                      # ── Strategy layer (engines)
 │   │   ├── sharp.tool.ts           #   implements Tool<SharpJob>
 │   │   ├── ffmpeg.tool.ts          #   implements Tool<FfmpegJob> (spawn + ffprobe inside)
@@ -61,6 +69,8 @@ optikit/
 │       ├── calc-bitrate.ts         #   size + duration → bitrate
 │       ├── naming.ts               #   @1x / @2x suffixes, output paths
 │       ├── parse-size.ts           #   "200mb" → bytes
+│       ├── mp4-atoms.ts            #   top-level atom walk + faststart verdict
+│       ├── optical-center.ts       #   centre of mass, viewBox, translate wrapping
 │       └── *.test.ts               #   tests co-located (Vitest)
 ├── package.json
 ├── tsconfig.json
@@ -145,6 +155,11 @@ needs to know how an engine runs — that is the point of the Strategy pattern.
 ## Testing strategy
 
 Tests target the **pure logic** (no IO) — output naming & retina rules, common
-base directory, bitrate calculation, size parsing, preset resolution, and Zod
-schema validation. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are
+base directory, bitrate calculation, size parsing, preset resolution, MP4 atom
+walking, centre-of-mass maths, and Zod schema validation.
+
+The atom walker takes a `read(offset, length)` callback instead of a path, so
+tests feed it an in-memory buffer; the command layer passes a real file handle.
+One test renders a triangle through sharp: librsvg is in-process and
+deterministic, and it is the only way to prove the SVG → pixels → offset chain. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are
 not unit-tested — that responsibility belongs to the upstream libraries.

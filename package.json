@@ -1,7 +1,7 @@
 {
   "name": "@gulyakevich/optikit",
   "version": "0.3.0",
-  "description": "CLI utility to optimize web assets — images, video, og-image, favicon, svg, and PNG trim.",
+  "description": "CLI utility to optimize web assets — images, video (faststart), og-image, favicon, svg, PNG trim — and optically centre icons.",
   "type": "module",
   "bin": {
     "optikit": "dist/cli.js"
@@ -31,7 +31,10 @@
     "ffmpeg",
     "webp",
     "avif",
-    "trim"
+    "trim",
+    "faststart",
+    "optical-alignment",
+    "icons"
   ],
   "author": "Olga Gulyakevich",
   "license": "MIT",

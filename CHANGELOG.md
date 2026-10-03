@@ -5,6 +5,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [0.4.0] — 2026-10-03
+
+### Fixed
+
+- **Every mp4 from `video convert` and `video compress` is now faststart** — the index
+  (`moov`) is written before the media data. Before, ffmpeg's default left it at the
+  end, so a browser had to fetch the tail of the file before it could play, and each
+  first play showed a loading spinner. With `--max`, the flag goes on the final pass.
+- Invalid flags are reported one line per flag, named as typed
+  (`✖ --quality: Too big: expected number to be <=100`), instead of a raw JSON dump.
+- An absolute input path is printed as given. Before, it came out relative to the
+  current directory, e.g. `../../../../private/tmp/…`.
+
+### Added
+
+- `video faststart` — moves the index to the front with a stream copy: no re-encode,
+  no quality loss, seconds per clip. Each output is verified after writing.
+- `video check` — reports whether each mp4/m4v/mov is faststart and exits non-zero if
+  any is not, for CI and pre-build steps. Reads only atom headers; needs no ffmpeg.
+- `icon audit` — finds icons whose ink is off the canvas centre (the eye centres mass,
+  the browser centres the bounding box) and reports the gap in viewBox units and %.
+  Report-only by default; `--fix` writes shifted copies with the translate baked into
+  the paths by svgo and re-measures them. Options: `--amount full|half|<0–1>`,
+  `--threshold <percent>`, `--same-as <file>` for state pairs.
+
 ## [0.3.0] — 2026-09-21
 
 ### Security
@@ -63,6 +88,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `video convert` / `video compress` (ffmpeg → mp4, `--max`), `svg` (svgo) and
   `favicon` (full set + `.ico` + manifest + `<link>` snippet).
 
+[0.4.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.4.0
 [0.3.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.3.0
 [0.2.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.1.0
