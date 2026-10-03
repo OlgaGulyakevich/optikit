@@ -4,6 +4,7 @@ import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
+import { assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import type { ResolvedVideo } from './resolve-preset.js';
 
 /** Accepted input video extensions (output is always mp4). */
@@ -21,15 +22,17 @@ export const transcodeVideos = async (
   files: readonly string[],
   resolved: ResolvedVideo,
   outDir: string,
+  webNames: boolean,
 ): Promise<void> => {
   const base = commonBaseDir(files);
+  if (webNames) assertNoWebNameCollisions(files, base);
   const tool = createTool('ffmpeg');
 
   for (const input of files) {
-    const output = join(
+    const output = outputPath(
       outDir,
-      relative(base, dirname(input)),
-      `${basename(input, extname(input))}.mp4`,
+      join(outDir, relative(base, dirname(input)), `${basename(input, extname(input))}.mp4`),
+      webNames,
     );
     const job: FfmpegJob = {
       input,

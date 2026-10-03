@@ -6,6 +6,7 @@ import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
+import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import { trimSchema } from './trim.schema.js';
 
 /** Formats worth trimming (transparent padding lives in the alpha channel). */
@@ -23,6 +24,7 @@ export const trimCommand: CliCommand = {
       .description('Trim transparent/empty padding from PNG & WebP images (sharp).')
       .option('-o, --out <dir>', 'output directory (default: optimized)')
       .option('-t, --threshold <n>', 'trim aggressiveness 0–255 (default: 120)')
+      .option(...WEB_NAMES_OPTION)
       .action(async (input: string, options: Record<string, unknown>) => {
         await trimCommand.run({ input, ...options });
       });
@@ -38,11 +40,16 @@ export const trimCommand: CliCommand = {
     }
 
     const base = commonBaseDir(files);
+    if (config.webNames) assertNoWebNameCollisions(files, base);
     const tool = createTool('sharp');
 
     for (const input of files) {
       const ext = extname(input);
-      const output = join(config.out, relative(base, dirname(input)), basename(input));
+      const output = outputPath(
+        config.out,
+        join(config.out, relative(base, dirname(input)), basename(input)),
+        config.webNames,
+      );
       const job: SharpJob = {
         input,
         output,

@@ -25,6 +25,8 @@ export const auditSchema = z.object({
   threshold: z.coerce.number().min(0).max(50).default(1),
   /** Apply this icon's correction instead of each file's own — keeps state pairs aligned. */
   sameAs: z.string().min(1).optional(),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 export type AuditConfig = z.infer<typeof auditSchema>;

@@ -6,6 +6,7 @@ import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
 import { correctionFor, verdictFor, type InkOffset, type Point } from '../../utils/optical-center.js';
+import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import { auditSchema } from './icon.schema.js';
 import { measureIcon } from './measure.js';
 
@@ -38,6 +39,7 @@ export const runAudit = async (raw: unknown): Promise<void> => {
     : undefined;
 
   const base = commonBaseDir(files);
+  if (config.fix && config.webNames) assertNoWebNameCollisions(files, base);
   const svgo = createTool('svgo');
   const count = { ok: 0, shift: 0, check: 0, fixed: 0, failed: 0 };
 
@@ -61,7 +63,11 @@ export const runAudit = async (raw: unknown): Promise<void> => {
       logger.warn(`${file} — ink off by ${describeOffset(offset)} → shift ${asTranslate(shift)}${source}`);
       if (!config.fix) continue;
 
-      const output = join(config.out, relative(base, dirname(file)), basename(file));
+      const output = outputPath(
+        config.out,
+        join(config.out, relative(base, dirname(file)), basename(file)),
+        config.webNames,
+      );
       const job: SvgoJob = { input: file, output, translate: shift };
       await ensureDir(dirname(output));
       const result = await svgo.run(job);
@@ -124,6 +130,7 @@ export const registerAudit = (icon: Program): void => {
     .option('--threshold <percent>', 'ignore offsets below this % of the canvas (default: 1)')
     .option('--same-as <file>', "apply this icon's shift to every input (state pairs)")
     .option('-o, --out <dir>', 'output directory for fixed copies (default: optimized)')
+    .option(...WEB_NAMES_OPTION)
     .addHelpText('after', HELP_AFTER)
     .action(async (input: string, options: Record<string, unknown>) => {
       await runAudit({ input, ...options });

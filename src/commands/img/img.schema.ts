@@ -15,6 +15,8 @@ export const imgSchema = z.object({
   avif: z.boolean().default(false),
   /** Treat plain (suffix-less) inputs as @2x and emit @1x + @2x. */
   retina: z.boolean().default(false),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 /** Type derived from the schema — single source of truth for the parsed config. */

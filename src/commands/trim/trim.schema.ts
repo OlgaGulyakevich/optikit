@@ -8,6 +8,8 @@ export const trimSchema = z.object({
   out: z.string().default('optimized'),
   /** Trim threshold — higher = more aggressive (kills Figma alpha "ghosts"). */
   threshold: z.coerce.number().min(0).default(120),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 export type TrimConfig = z.infer<typeof trimSchema>;

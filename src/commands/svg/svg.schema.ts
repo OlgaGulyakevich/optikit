@@ -12,6 +12,8 @@ export const svgSchema = z.object({
    * that quietly passes executable content through is a bad default.
    */
   keepScripts: z.boolean().default(false),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 export type SvgConfig = z.infer<typeof svgSchema>;

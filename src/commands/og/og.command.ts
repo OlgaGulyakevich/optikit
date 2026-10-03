@@ -5,6 +5,7 @@ import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { buildOgJobs, commonBaseDir } from '../../utils/naming.js';
+import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import { ogSchema } from './og.schema.js';
 
 /** `og` — generate 1200×630 cover JPEGs for Open Graph previews (*-og.jpg). */
@@ -17,6 +18,7 @@ export const ogCommand: CliCommand = {
       .description('Generate 1200×630 cover JPEGs for Open Graph (*-og.jpg).')
       .option('-o, --out <dir>', 'output directory (default: optimized)')
       .option('-q, --quality <n>', 'JPEG quality 1–100 (default: 80)')
+      .option(...WEB_NAMES_OPTION)
       .action(async (input: string, options: Record<string, unknown>) => {
         await ogCommand.run({ input, ...options });
       });
@@ -27,11 +29,12 @@ export const ogCommand: CliCommand = {
 
     const files = await collectInputs(config.input);
     const base = commonBaseDir(files);
+    if (config.webNames) assertNoWebNameCollisions(files, base);
     const jobs = buildOgJobs(files, {
       inputBase: base,
       outDir: config.out,
       quality: config.quality,
-    });
+    }).map((job) => ({ ...job, output: outputPath(config.out, job.output, config.webNames) }));
 
     if (jobs.length === 0) {
       logger.warn(`No images found for "${config.input}".`);

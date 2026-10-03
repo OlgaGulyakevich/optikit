@@ -5,6 +5,7 @@ import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir, keepSmaller } from '../../core/file.service.js';
 import { buildImageJobs, commonBaseDir } from '../../utils/naming.js';
+import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import { imgSchema } from './img.schema.js';
 
 /** `img` — optimize raster images to WebP, applying the @1x/@2x retina rules. */
@@ -19,6 +20,7 @@ export const imgCommand: CliCommand = {
       .option('-q, --quality <n>', 'encoding quality 1–100 (default: 85)')
       .option('--avif', 'also emit AVIF variants')
       .option('--retina', 'treat plain images as @2x (emit @1x + @2x)')
+      .option(...WEB_NAMES_OPTION)
       .action(async (input: string, options: Record<string, unknown>) => {
         await imgCommand.run({ input, ...options });
       });
@@ -29,13 +31,14 @@ export const imgCommand: CliCommand = {
 
     const files = await collectInputs(config.input);
     const base = commonBaseDir(files);
+    if (config.webNames) assertNoWebNameCollisions(files, base);
     const jobs = buildImageJobs(files, {
       inputBase: base,
       outDir: config.out,
       quality: config.quality,
       avif: config.avif,
       retina: config.retina,
-    });
+    }).map((job) => ({ ...job, output: outputPath(config.out, job.output, config.webNames) }));
 
     if (jobs.length === 0) {
       logger.warn(`No images found for "${config.input}".`);
@@ -49,7 +52,7 @@ export const imgCommand: CliCommand = {
 
       // keep-smaller only for same-format, same-size re-encodes (e.g. @2x png→png).
       const isReEncode =
-        extname(job.output) === extname(job.input) &&
+        extname(job.output).toLowerCase() === extname(job.input).toLowerCase() &&
         job.scale === undefined &&
         job.resize === undefined;
       const keptOriginal = isReEncode && (await keepSmaller(job.input, job.output));

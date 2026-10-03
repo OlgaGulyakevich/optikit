@@ -7,6 +7,7 @@ import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir, keepSmaller } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
+import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import { svgSchema } from './svg.schema.js';
 
 /** `svg` — optimize/minify SVG files with svgo (default preset). */
@@ -19,6 +20,7 @@ export const svgCommand: CliCommand = {
       .description('Optimize/minify SVG files with svgo (default preset).')
       .option('-o, --out <dir>', 'output directory (default: optimized)')
       .option('--keep-scripts', 'keep <script>, on* handlers and javascript: links (stripped by default)')
+      .option(...WEB_NAMES_OPTION)
       .action(async (input: string, options: Record<string, unknown>) => {
         await svgCommand.run({ input, ...options });
       });
@@ -36,12 +38,17 @@ export const svgCommand: CliCommand = {
     }
 
     const base = commonBaseDir(files);
+    if (config.webNames) assertNoWebNameCollisions(files, base);
     const tool = createTool('svgo');
 
     let failed = 0;
 
     for (const input of files) {
-      const output = join(config.out, relative(base, dirname(input)), basename(input));
+      const output = outputPath(
+        config.out,
+        join(config.out, relative(base, dirname(input)), basename(input)),
+        config.webNames,
+      );
       const job: SvgoJob = { input, output, keepScripts: config.keepScripts };
       await ensureDir(dirname(output));
 

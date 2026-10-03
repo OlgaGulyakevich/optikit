@@ -9,6 +9,7 @@ import { commonBaseDir } from '../../utils/naming.js';
 import { parseSize } from '../../utils/parse-size.js';
 import { calcVideoBitrate } from '../../utils/calc-bitrate.js';
 import { resolveVideoConfig } from './resolve-preset.js';
+import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import { compressSchema } from './video.schema.js';
 import { collectVideos, transcodeVideos } from './transcode.js';
 
@@ -28,7 +29,7 @@ export const runCompress = async (raw: unknown): Promise<void> => {
 
   // Quality mode (default): single-pass CRF.
   if (config.max === undefined) {
-    await transcodeVideos(files, resolved, config.out);
+    await transcodeVideos(files, resolved, config.out, config.webNames);
     logger.info(`Done — ${files.length} video(s) compressed to "${config.out}".`);
     return;
   }
@@ -37,15 +38,16 @@ export const runCompress = async (raw: unknown): Promise<void> => {
   const targetBytes = parseSize(config.max);
   const audioBitrate = resolved.mute ? 0 : 128_000;
   const base = commonBaseDir(files);
+  if (config.webNames) assertNoWebNameCollisions(files, base);
   const tool = createTool('ffmpeg');
 
   for (const input of files) {
     const durationSeconds = await probeDuration(input);
     const videoBitrate = calcVideoBitrate({ targetBytes, durationSeconds, audioBitrate });
-    const output = join(
+    const output = outputPath(
       config.out,
-      relative(base, dirname(input)),
-      `${basename(input, extname(input))}.mp4`,
+      join(config.out, relative(base, dirname(input)), `${basename(input, extname(input))}.mp4`),
+      config.webNames,
     );
     const job: FfmpegJob = {
       input,
@@ -73,6 +75,7 @@ export const registerCompress = (video: Program): void => {
     .option('--max <size>', 'hard size budget, e.g. 8mb (2-pass bitrate)')
     .option('--max-width <px>', 'cap output width (overrides preset/default)')
     .option('--mute', 'drop the audio track')
+    .option(...WEB_NAMES_OPTION)
     .option('-o, --out <dir>', 'output directory (default: optimized)')
     .action(async (input: string, options: Record<string, unknown>) => {
       await runCompress({ input, ...options });

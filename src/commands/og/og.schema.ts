@@ -11,6 +11,8 @@ export const ogSchema = z.object({
   out: z.string().default('optimized'),
   /** JPEG quality (1–100). CLI passes strings, so it is coerced. */
   quality: z.coerce.number().int().min(1).max(100).default(80),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 /** Type derived from the schema — single source of truth for the parsed config. */

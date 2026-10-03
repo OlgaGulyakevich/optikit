@@ -9,6 +9,7 @@ describe('imgSchema', () => {
       quality: 85,
       avif: false,
       retina: false,
+      webNames: false, // off by default: existing output names must not change
     });
   });
 

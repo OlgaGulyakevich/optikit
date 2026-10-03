@@ -1,6 +1,7 @@
 import type { Command as Program } from 'commander';
 import { logger } from '../../core/logger.js';
 import { resolveVideoConfig } from './resolve-preset.js';
+import { WEB_NAMES_OPTION } from '../../utils/web-name.js';
 import { convertSchema } from './video.schema.js';
 import { collectVideos, transcodeVideos } from './transcode.js';
 
@@ -16,7 +17,7 @@ export const runConvert = async (raw: unknown): Promise<void> => {
     return;
   }
 
-  await transcodeVideos(files, resolved, config.out);
+  await transcodeVideos(files, resolved, config.out, config.webNames);
   logger.info(`Done — ${files.length} video(s) written to "${config.out}".`);
 };
 
@@ -29,6 +30,7 @@ export const registerConvert = (video: Program): void => {
     .option('--crf <n>', 'quality 0–51, lower = better (default: 23)')
     .option('--max-width <px>', 'cap output width (overrides preset)')
     .option('--mute', 'drop the audio track')
+    .option(...WEB_NAMES_OPTION)
     .option('-o, --out <dir>', 'output directory (default: optimized)')
     .action(async (input: string, options: Record<string, unknown>) => {
       await runConvert({ input, ...options });

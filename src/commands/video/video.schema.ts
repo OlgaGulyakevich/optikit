@@ -12,6 +12,8 @@ const videoBaseSchema = z.object({
   maxWidth: z.coerce.number().int().positive().optional(),
   /** Drop the audio track. */
   mute: z.boolean().default(false),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 /** `video convert` — re-encode any input to web mp4 at a quality (CRF). */
@@ -38,6 +40,8 @@ export const faststartSchema = z.object({
   input: z.string().min(1),
   /** Output directory; input sub-structure is mirrored under it. */
   out: z.string().default('optimized'),
+  /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+  webNames: z.boolean().default(false),
 });
 
 export type FaststartConfig = z.infer<typeof faststartSchema>;
