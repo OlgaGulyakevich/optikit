@@ -42,6 +42,7 @@ optikit/
 │   │   │   ├── compress.command.ts
 │   │   │   ├── faststart.command.ts #  stream-copy remux, index to the front
 │   │   │   ├── check.command.ts    #   atom-order gate for CI (exit 1)
+│   │   │   ├── poster.command.ts   #   score frames → best / candidates + sheet / --at
 │   │   │   ├── read-atoms.ts       #   file → atom headers (IO adapter)
 │   │   │   ├── video.schema.ts     #   Zod (shared base + per-command)
 │   │   │   ├── video.presets.ts    #   mobile / desktop ceilings
@@ -71,6 +72,9 @@ optikit/
 │       ├── parse-size.ts           #   "200mb" → bytes
 │       ├── mp4-atoms.ts            #   top-level atom walk + faststart verdict
 │       ├── optical-center.ts       #   centre of mass, viewBox, translate wrapping
+│       ├── frame-score.ts          #   brightness, Laplacian sharpness, picks, timecodes
+│       ├── web-name.ts             #   any language → safe web name, collisions
+│       ├── format-issues.ts        #   Zod issues → "--flag: message" lines
 │       └── *.test.ts               #   tests co-located (Vitest)
 ├── package.json
 ├── tsconfig.json
@@ -156,7 +160,8 @@ needs to know how an engine runs — that is the point of the Strategy pattern.
 
 Tests target the **pure logic** (no IO) — output naming & retina rules, common
 base directory, bitrate calculation, size parsing, preset resolution, MP4 atom
-walking, centre-of-mass maths, and Zod schema validation.
+walking, centre-of-mass maths, poster frame scoring, web names, and Zod schema
+validation.
 
 The atom walker takes a `read(offset, length)` callback instead of a path, so
 tests feed it an in-memory buffer; the command layer passes a real file handle.

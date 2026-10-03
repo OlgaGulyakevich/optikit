@@ -5,6 +5,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [0.5.0] — 2026-10-04
+
+### Added
+
+- `video poster` — a still frame per clip for `<video poster>`, as WebP. By default
+  the whole clip is sampled in one decode pass and the sharpest well-exposed frame
+  wins (the first frame is usually a fade or a blur). `--candidates <n>` writes `n`
+  frames from across the clip plus a contact sheet with timecodes to pick from;
+  `--at <time>` takes an exact moment.
+- `--web-names` on every command that writes files (not `favicon`): output names
+  become lowercase latin with no spaces or URL-breaking characters, from any
+  language — Cyrillic, German (`ä → ae`), Czech, Polish, Nordic. Folders too;
+  `@1x`/`@2x` kept. Both encodings of one letter give the same name. Two inputs that
+  would collide stop the command before anything is written.
+
+### Dependencies
+
+- `@sindresorhus/transliterate` — transliteration with per-language rules, no
+  dependencies of its own.
+
 ## [0.4.0] — 2026-10-03
 
 ### Fixed
@@ -88,6 +108,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `video convert` / `video compress` (ffmpeg → mp4, `--max`), `svg` (svgo) and
   `favicon` (full set + `.ico` + manifest + `<link>` snippet).
 
+[0.5.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.5.0
 [0.4.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.4.0
 [0.3.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.3.0
 [0.2.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.2.0

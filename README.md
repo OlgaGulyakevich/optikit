@@ -31,7 +31,7 @@ optikit icon audit ./icons                    # → which icons look off-centre,
 ## Requirements
 
 - **Node.js ≥ 22**
-- **ffmpeg** in your `PATH` — **only** for `video convert`, `compress` and `faststart`
+- **ffmpeg** in your `PATH` — **only** for `video convert`, `compress`, `faststart` and `poster`
   (`ffmpeg -version` to check; macOS: `brew install ffmpeg`).
   Everything else — including `video check` — needs nothing beyond the npm install.
 
@@ -124,6 +124,30 @@ optikit video check ./public/video     # ✓ per file, exit 1 if any fails
   nothing to check. Needs no ffmpeg.
 - Exits **non-zero** when a file has its index after the media data — put it in CI
   or a pre-build step, and a clip that would spin on first play never ships.
+
+### `video poster` — a still frame for `<video poster>`
+
+```bash
+optikit video poster ./clips                     # best frame per clip → clip-poster.webp
+optikit video poster hero.mp4 --candidates 6     # 6 frames + a contact sheet to pick from
+optikit video poster hero.mp4 --at 00:04.2       # exactly this moment
+```
+
+Without a poster the page shows an empty box until the first frame decodes; with
+one of the same aspect ratio, the space is filled from the first paint.
+
+- **Default — automatic.** The first frame is usually the worst (fade from black,
+  motion blur, nobody in shot yet), so the whole clip (5–95%) is sampled in one
+  decode pass. Dark and blown-out frames are dropped, and the sharpest one left wins
+  (variance of the Laplacian — a standard blur metric). Good for pipelines.
+- **`--candidates <n>`** (2–12) — the maths narrows it down, you choose. Writes `n`
+  good frames from different parts of the clip (`clip-poster-1.webp` …) and a
+  contact sheet with timecodes (`clip-posters.jpg`). Keep the one you like, or
+  re-run with `--at`. A frame that is sharp is not always the one that sells: the
+  open box beats the closed one, the smile beats mid-word.
+- **`--at <time>`** — `4.2`, `00:04.2` or `00:00:04.2`.
+- Output is WebP (quality 80), width capped at 1920 like `compress`, so poster and
+  clip line up. Flags: `--at`, `--candidates`, `--max-width`, `--quality`, `--out`.
 
 ### `svg` — optimize SVG with svgo
 
@@ -237,6 +261,35 @@ Height is derived from the source aspect ratio; never upscaled.
 - Re-runnable / idempotent: inputs are matched by source format, so generated
   outputs (WebP/AVIF/ICO) are never reprocessed.
 
+### `--web-names` — safe file names, any language
+
+Every command that writes files (except `favicon`, whose names are fixed) takes
+`--web-names`:
+
+```text
+Отзыв кофе (2).MP4         → otzyv-kofe-2.mp4
+Präsentation Zürich.mov    → praesentation-zuerich.mov
+Case#2 FINAL.svg           → case-2-final.svg
+Иконки UI/Лого Ёлка.svg    → ikonki-ui/logo-yolka.svg
+hero@2x.png                → hero@2x.png   (already fine — unchanged)
+```
+
+A name that looks fine can still break on the web — and not only in Cyrillic:
+
+- **one letter, two encodings** — `й`, `ä`, `é` can be stored as one character
+  or as a letter plus a separate mark. They look identical and differ byte for
+  byte, so a link that reads right returns 404;
+- **case** — `Hero.MP4` and `hero.mp4` are one file on macOS/Windows, two on a
+  Linux server;
+- **`#`, `?`, `%`, `&`, spaces, brackets** — `case#2.mp4` is a link to `case`.
+
+Any script → latin (Cyrillic, German `ä → ae` as in `stadt-zuerich.ch`, Czech,
+Polish, Nordic…, via [`@sindresorhus/transliterate`](https://github.com/sindresorhus/transliterate)),
+lowercase, everything but `a–z 0–9 . _ - @` → `-`. Folders are renamed too;
+`@1x`/`@2x` survive. If two inputs would end up with the same name
+(`Отзыв.mp4` and `otzyv.mp4`), the command stops **before** writing anything
+and lists the pairs. Off by default, so existing output names never change.
+
 ## Under the hood
 
 TypeScript (`strict` + `noUncheckedIndexedAccess`), ESM, Node 22. Four engines —
@@ -256,7 +309,8 @@ type contracts, and data flow.
 - **Tested where it matters** — Vitest on the pure logic: output naming (`@1x`/`@2x` rules),
   2-pass bitrate math, human size parsing (`3mb`), preset resolution, MP4 atom walking
   (incl. 64-bit sizes), centre-of-mass maths (a triangle balances at 1/3 of its height),
-  and the argv schemas.
+  poster frame scoring and timecodes, web names (incl. both encodings of one letter and
+  name collisions), and the argv schemas.
   No tests on thin wrappers around sharp/ffmpeg — those libraries are already tested by their authors.
 - **CI on every push and PR** — `lint → test → build` on Node 22 (GitHub Actions).
 - **Publish gate** — `prepublishOnly` re-runs lint + tests + build, so a broken build
@@ -271,7 +325,6 @@ Ideas for later (not yet implemented):
 - `gif2video` — convert GIFs to mp4 (much smaller files)
 - `blur` — generate LQIP base64 placeholders (for `next/image` / Astro)
 - interactive mode — prompt for missing arguments (`@inquirer/prompts`)
-- `video poster` — a still frame from the clip (first, or `--at 00:00:02`)
 
 ## License
 
