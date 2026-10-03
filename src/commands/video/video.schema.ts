@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseTimecode } from '../../utils/frame-score.js';
 
 /** Fields shared by all `video` subcommands (validated on the argv boundary). */
 const videoBaseSchema = z.object({
@@ -53,3 +54,38 @@ export const checkSchema = z.object({
 });
 
 export type CheckConfig = z.infer<typeof checkSchema>;
+
+/** `video poster` — a still frame for `<video poster>`, chosen or picked by time. */
+export const posterSchema = z
+  .object({
+    /** Input file, directory, or glob. */
+    input: z.string().min(1),
+    /** Output directory; input sub-structure is mirrored under it. */
+    out: z.string().default('optimized'),
+    /** Take the frame at this time instead of choosing one (`4.2`, `00:04.2`). */
+    at: z
+      .string()
+      .transform((text, ctx) => {
+        try {
+          return parseTimecode(text);
+        } catch (error) {
+          ctx.issues.push({ code: 'custom', input: text, message: error instanceof Error ? error.message : String(error) });
+          return z.NEVER;
+        }
+      })
+      .optional(),
+    /** Write this many good frames from across the clip + a contact sheet, to pick by eye. */
+    candidates: z.coerce.number().int().min(2).max(12).optional(),
+    /** Width cap; matches `compress`'s 1080p default so poster and clip line up. */
+    maxWidth: z.coerce.number().int().positive().default(1920),
+    /** WebP quality (1–100). */
+    quality: z.coerce.number().int().min(1).max(100).default(80),
+    /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
+    webNames: z.boolean().default(false),
+  })
+  .refine((config) => config.at === undefined || config.candidates === undefined, {
+    message: 'use either --at or --candidates, not both',
+    path: ['at'],
+  });
+
+export type PosterConfig = z.infer<typeof posterSchema>;

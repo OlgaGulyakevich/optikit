@@ -73,3 +73,63 @@ export const renderAlpha = async (
     .toBuffer({ resolveWithObject: true });
   return { alpha: new Uint8Array(data), width: info.width, height: info.height };
 };
+
+/** Encode an in-memory image to WebP at `output`, capped at `maxWidth` (never upscaled). */
+export const saveWebp = async (
+  image: Buffer,
+  output: string,
+  { maxWidth, quality }: { maxWidth: number; quality: number },
+): Promise<void> => {
+  await sharp(image).resize({ width: maxWidth, withoutEnlargement: true }).webp({ quality }).toFile(output);
+};
+
+/** Escape text for an SVG `<text>` node. */
+const escapeXml = (text: string) =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * Lay frames out in a grid, each with its label on a dark band — a contact
+ * sheet to choose a poster from at a glance. Labels are drawn as SVG text,
+ * which sharp (librsvg) renders with the system sans-serif font.
+ */
+export const saveContactSheet = async (
+  tiles: readonly { image: Buffer; label: string }[],
+  output: string,
+  { columns, tileWidth }: { columns: number; tileWidth: number },
+): Promise<void> => {
+  const resized = await Promise.all(
+    tiles.map(async ({ image, label }) => {
+      const { data, info } = await sharp(image).resize({ width: tileWidth }).toBuffer({ resolveWithObject: true });
+      return { data, height: info.height, label };
+    }),
+  );
+  const tileHeight = Math.max(...resized.map((tile) => tile.height));
+  const gap = 8;
+  const rows = Math.ceil(resized.length / columns);
+  const band = 36;
+
+  const layers = resized.flatMap((tile, i) => {
+    const left = gap + (i % columns) * (tileWidth + gap);
+    const top = gap + Math.floor(i / columns) * (tileHeight + gap);
+    const caption = Buffer.from(
+      `<svg width="${tileWidth}" height="${band}"><rect width="100%" height="100%" fill="#000" fill-opacity="0.65"/>` +
+        `<text x="12" y="25" font-family="sans-serif" font-size="18" fill="#fff">${escapeXml(tile.label)}</text></svg>`,
+    );
+    return [
+      { input: tile.data, left, top },
+      { input: caption, left, top: top + tile.height - band },
+    ];
+  });
+
+  await sharp({
+    create: {
+      width: gap + columns * (tileWidth + gap),
+      height: gap + rows * (tileHeight + gap),
+      channels: 3,
+      background: '#1a1a1a',
+    },
+  })
+    .composite(layers)
+    .jpeg({ quality: 85 })
+    .toFile(output);
+};

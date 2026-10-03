@@ -4,10 +4,11 @@ import { registerConvert } from './convert.command.js';
 import { registerCompress } from './compress.command.js';
 import { registerFaststart } from './faststart.command.js';
 import { registerCheck } from './check.command.js';
+import { registerPoster } from './poster.command.js';
 
 /**
  * `video` — parent command grouping the video subcommands (`convert`,
- * `compress`, `faststart`, `check`). It only wires subcommands; commander dispatches to their actions,
+ * `compress`, `faststart`, `check`, `poster`). It only wires subcommands; commander dispatches to their actions,
  * so `run` is unused here.
  */
 export const videoCommand: CliCommand = {
@@ -19,6 +20,7 @@ export const videoCommand: CliCommand = {
     registerCompress(video);
     registerFaststart(video);
     registerCheck(video);
+    registerPoster(video);
   },
 
   run(): Promise<void> {

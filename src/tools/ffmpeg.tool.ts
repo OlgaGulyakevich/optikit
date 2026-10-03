@@ -167,3 +167,93 @@ export class FfmpegTool implements Tool<FfmpegJob> {
     return { outputs: [job.output] };
   }
 }
+
+/**
+ * Decode `count` evenly spaced frames from `start` over `span` seconds in ONE
+ * pass, each squashed to `size`×`size` greyscale. Raw bytes, so every frame is
+ * exactly `size²` long and the stream splits by arithmetic alone.
+ *
+ * One pass matters: a clip with a single keyframe makes every separate seek
+ * decode from the start again. Squashing the aspect ratio is fine for scoring —
+ * frames of one clip are only compared with each other.
+ */
+export const sampleGrayFrames = (
+  input: string,
+  { start, span, count, size }: { start: number; span: number; count: number; size: number },
+): Promise<Uint8Array[]> =>
+  new Promise((resolve, reject) => {
+    const proc = spawn('ffmpeg', [
+      '-v',
+      'error',
+      '-ss',
+      start.toFixed(3),
+      '-t',
+      span.toFixed(3),
+      '-i',
+      input,
+      '-vf',
+      `fps=${count}/${span.toFixed(3)},scale=${size}:${size},format=gray`,
+      '-f',
+      'rawvideo',
+      '-',
+    ]);
+    const chunks: Buffer[] = [];
+    let stderr = '';
+    proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+    proc.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`ffmpeg could not sample frames of "${input}".\n${stderr.slice(-300)}`));
+        return;
+      }
+      const raw = new Uint8Array(Buffer.concat(chunks));
+      const frameSize = size * size;
+      const frames: Uint8Array[] = [];
+      for (let offset = 0; offset + frameSize <= raw.length && frames.length < count; offset += frameSize) {
+        frames.push(raw.subarray(offset, offset + frameSize));
+      }
+      resolve(frames);
+    });
+  });
+
+/**
+ * Grab one frame at `seconds` as PNG bytes (stdout, no temp file). `-ss` before
+ * `-i` seeks fast and still lands on the exact frame; rotation metadata (phone
+ * video) is applied, so a portrait clip gives a portrait frame.
+ */
+export const extractFrame = (input: string, seconds: number): Promise<Buffer> =>
+  new Promise((resolve, reject) => {
+    const proc = spawn('ffmpeg', [
+      '-v',
+      'error',
+      '-ss',
+      seconds.toFixed(3),
+      '-i',
+      input,
+      '-frames:v',
+      '1',
+      '-f',
+      'image2pipe',
+      '-c:v',
+      'png',
+      '-',
+    ]);
+    const chunks: Buffer[] = [];
+    let stderr = '';
+    proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+    proc.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      const png = Buffer.concat(chunks);
+      if (code === 0 && png.length > 0) {
+        resolve(png);
+      } else {
+        reject(new Error(`ffmpeg could not read a frame at ${seconds.toFixed(1)}s of "${input}".\n${stderr.slice(-300)}`));
+      }
+    });
+  });
