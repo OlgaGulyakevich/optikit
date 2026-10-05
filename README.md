@@ -205,7 +205,8 @@ right by the ruler and the eye still reads as wrong.
 
 ```bash
 optikit icon audit ./icons                       # report only
-optikit icon audit ./icons --fix                 # write shifted copies to optimized/
+optikit icon audit ./icons --fix                 # write half-corrected copies to optimized/
+optikit icon audit caret.svg --fix --amount full # rotating icon: full correction
 optikit icon audit volume-off.svg --fix --same-as volume.svg
 ```
 
@@ -219,14 +220,31 @@ centre — in viewBox units and in % of the canvas:
 ✓ icons/ui/arrow-right.svg — centred (0.8%)
 ⚠ icons/marker/triangle.svg — ink off by x +0.00, y -1.00 (+0.00%, -3.57%) → shift translate(0 1)
 ⚠ icons/ui/volume.svg — ink off by x +1.13, y -0.00 (+4.05%, -0.00%); has strokes — check by eye
+⚠ icons/ui/telegram.svg — ink off by x +1.28, y -0.43 (+9.11%, -3.61%) → shift translate(-0.64 0.22)
+  would cut the drawing off — grow the canvas to viewBox="0 -0.22 15.28 12" instead
+  (renders ~8% smaller in the same box)
+✓ icons/marker/triangle.svg — centred on purpose (half), 1.8% left by design   ← after --fix
 ```
 
 - **Report by default.** `--fix` writes corrected copies to `--out`; sources are
   never modified. The fix wraps the content in `translate()` and svgo bakes it into
   the path coordinates — no `transform` is left behind:
-  `M3.5 7.5H24.5L14 24Z` → `M3.5 8.5h21L14 25Z`. Every fixed file is re-measured.
-- `--amount full|half|<0–1>` — how much of the correction to apply (default `full`).
-  The centre of mass is the upper bound; a static icon sometimes looks right at `0.75`.
+  `M3.5 7.5H24.5L14 24Z` → `M3.5 8h21L14 24.5Z` (half of `translate(0 1)`).
+- **Tight canvas.** When the shift would push the drawing past the canvas edge
+  (an icon drawn edge to edge), the path is left alone and the `viewBox` grows and
+  re-centres instead — nothing gets cut off. In the same CSS box the icon then
+  renders smaller, and the report says by how much.
+- **Every fixed file is re-measured** on a canvas with a margin, so ink past the
+  edge is visible to the check. A fix that cuts the drawing off, or lands the centre
+  anywhere but the target, fails the command — it does not report success.
+- `--amount full|half|<0–1>` — how much of the correction to apply (default **`half`**).
+  The centre of mass is the upper bound, not the target: a static icon in a small
+  badge is also judged by the gaps to the badge edges, and at `full` it can look
+  over-shifted. **Check the result by eye in the real badge.**
+- **`data-optical` mark.** `--fix` writes `data-optical="half"` (or `full`, `0.75`…)
+  on the root `<svg>`. A marked icon is reported as centred on purpose and is never
+  fixed twice. Tuned an icon by hand? Add the mark yourself, and the audit leaves it
+  alone instead of flagging the residual.
 - `--threshold <percent>` — offsets below this are left alone (default `1`).
   Even-stroke chevrons land around 0.8%.
 - `--same-as <file>` — apply one icon's shift to every input. For state pairs
@@ -236,7 +254,7 @@ centre — in viewBox units and in % of the canvas:
 
 **Before you `--fix`:**
 
-- **Rotating icons** (accordion caret, expand arrow) — use the full amount. Rotation
+- **Rotating icons** (accordion caret, expand arrow) — use `--amount full`. Rotation
   turns around the canvas centre; an off-centre mass swings in an arc.
 - **Illustrations with decorative strokes** (rays, sparks) — report only.
 - **Sets already aligned by their authors** (Lucide, Phosphor, SF Symbols) — don't

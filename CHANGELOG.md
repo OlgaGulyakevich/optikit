@@ -5,6 +5,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [0.6.0] — 2026-10-05
+
+### Changed
+
+- **`icon audit --amount` now defaults to `half`** (was `full`). The centre of mass
+  is the upper bound of the correction, not the target: a static icon in a small
+  badge is also judged by the gaps to the badge edges, and at `full` it looked
+  over-shifted. Pass `--amount full` for rotating icons.
+
+### Fixed
+
+- **`icon audit --fix` no longer cuts off icons drawn edge to edge.** The shift moved
+  the drawing past the canvas and the browser clipped it. When the drawing would not
+  fit, the `viewBox` now grows and re-centres instead, and the report says how much
+  smaller the icon renders in the same box.
+- **The check after `--fix` can now fail.** It measured the already-clipped drawing
+  and reported success. Icons are now measured on a canvas with a margin; a fix that
+  cuts ink off or misses its target fails the command.
+
+### Added
+
+- `data-optical` mark: `--fix` writes `data-optical="half"` (or the strength used) on
+  the root `<svg>`. Marked icons are reported as centred on purpose and never fixed
+  twice — add the mark by hand to an icon you tuned yourself.
+
 ## [0.5.0] — 2026-10-04
 
 ### Added
@@ -108,6 +133,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `video convert` / `video compress` (ffmpeg → mp4, `--max`), `svg` (svgo) and
   `favicon` (full set + `.ico` + manifest + `<link>` snippet).
 
+[0.6.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.6.0
 [0.5.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.5.0
 [0.4.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.4.0
 [0.3.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.3.0

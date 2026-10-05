@@ -54,7 +54,7 @@ optikit/
 │   │   └── icon/
 │   │       ├── icon.command.ts     #   parent — registers audit
 │   │       ├── audit.command.ts    #   measure → verdict → (--fix) svgo translate → re-measure
-│   │       └── measure.ts          #   SVG file → rendered alpha → ink offset
+│   │       └── measure.ts          #   SVG file → render on a padded canvas → ink centre + bounds + mark
 │   ├── tools/                      # ── Strategy layer (engines)
 │   │   ├── sharp.tool.ts           #   implements Tool<SharpJob>
 │   │   ├── ffmpeg.tool.ts          #   implements Tool<FfmpegJob> (spawn + ffprobe inside)
@@ -71,7 +71,7 @@ optikit/
 │       ├── naming.ts               #   @1x / @2x suffixes, output paths
 │       ├── parse-size.ts           #   "200mb" → bytes
 │       ├── mp4-atoms.ts            #   top-level atom walk + faststart verdict
-│       ├── optical-center.ts       #   centre of mass, viewBox, translate wrapping
+│       ├── optical-center.ts       #   centre of mass, ink bounds, fix plan (translate / grow viewBox), verify, mark
 │       ├── frame-score.ts          #   brightness, Laplacian sharpness, picks, timecodes
 │       ├── web-name.ts             #   any language → safe web name, collisions
 │       ├── format-issues.ts        #   Zod issues → "--flag: message" lines
