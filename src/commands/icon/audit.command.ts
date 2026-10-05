@@ -75,13 +75,15 @@ export const runAudit = async (raw: unknown): Promise<void> => {
       const before = await measureIcon(file);
       const { offset } = before;
 
-      // Centred on purpose at partial strength: the residual is by design.
-      // Re-fixing would apply the correction a second time.
+      // Marked: centred on purpose at partial strength, or (none) deliberately
+      // left as drawn — e.g. beside text. The residual is by design, and
+      // re-fixing would apply a correction nobody asked for.
       if (before.mark !== undefined) {
         count.ok += 1;
         count.marked += 1;
+        const how = before.mark === 0 ? 'left as drawn' : 'centred';
         logger.success(
-          `${file} — centred on purpose (${formatAmount(before.mark)}), ${worstPercent(offset).toFixed(1)}% left by design`,
+          `${file} — ${how} on purpose (${formatAmount(before.mark)}), ${worstPercent(offset).toFixed(1)}% off centre by design`,
         );
         continue;
       }
@@ -177,6 +179,8 @@ Marked icons:
   --fix writes data-optical="half" (or full, 0.75…) on the root <svg>. A marked
   icon is reported as centred on purpose and never fixed twice. Hand-tuned an
   icon yourself? Add the mark, and the audit will leave it alone.
+  data-optical="none" (or "0") — left uncorrected on purpose: an icon beside
+  text, where the eye measures the gap to the word, not the centre.
 
 Examples:
   optikit icon audit ./icons                      # report only

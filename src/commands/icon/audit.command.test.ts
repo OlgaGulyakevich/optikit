@@ -83,4 +83,16 @@ describe('icon audit --fix', () => {
     await runAudit({ input: join(first, 'triangle.svg'), fix: true, out: second });
     await expect(readFile(join(second, 'triangle.svg'), 'utf8')).rejects.toThrow(/ENOENT/);
   });
+
+  it('leaves an icon marked data-optical="none" alone, as aligned on purpose', async () => {
+    // Off-centre on its canvas (wedge), but it sits next to text by design.
+    const input = join(dir, 'beside-text.svg');
+    await writeFile(input, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 12" data-optical="none"><path d="M0 0L14 6L0 12Z"/></svg>');
+    const log = vi.mocked(console.log);
+
+    await runAudit({ input, fix: true, out: join(dir, 'out') });
+
+    expect(log.mock.calls.flat().join("\n")).toMatch(/left as drawn on purpose \(none\)/);
+    await expect(readFile(join(dir, 'out', 'beside-text.svg'), 'utf8')).rejects.toThrow(/ENOENT/);
+  });
 });

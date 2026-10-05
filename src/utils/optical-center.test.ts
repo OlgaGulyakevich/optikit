@@ -3,6 +3,7 @@ import { renderAlpha } from '../tools/sharp.tool.js';
 import {
   correctionFor,
   hasStrokes,
+  formatAmount,
   inkBounds,
   inkCenter,
   inkOffset,
@@ -163,9 +164,21 @@ describe('optical mark', () => {
     expect(readOpticalMark(twice)).toBe(0.5);
   });
 
+  // An icon next to text is left uncorrected on purpose: the eye measures the
+  // gap to the word, not the centre (Telegram beside a label, Yulia's site).
+  it.each(['none', '0'])('reads data-optical="%s" as "centred on purpose, zero correction"', (value) => {
+    expect(readOpticalMark(`<svg data-optical="${value}">`)).toBe(0);
+  });
+
+  it('names zero correction "none"', () => {
+    expect(formatAmount(0)).toBe('none');
+  });
+
   it('ignores a missing or garbled mark', () => {
     expect(readOpticalMark(svg)).toBeUndefined();
     expect(readOpticalMark('<svg data-optical="lots">')).toBeUndefined();
+    expect(readOpticalMark('<svg data-optical="-0.5">')).toBeUndefined();
+    expect(readOpticalMark('<svg data-optical=" ">')).toBeUndefined(); // Number(' ') === 0 — must not pass as "none"
   });
 });
 

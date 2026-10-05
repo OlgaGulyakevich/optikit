@@ -255,22 +255,27 @@ export const withViewBox = (svg: string, box: ViewBox): string =>
       : root.replace(/^<svg\b/i, `<svg viewBox="${value}"`);
   });
 
-/** `--amount` as written in the mark: `full`, `half`, or the number. */
+/** `--amount` as written in the mark: `none`, `full`, `half`, or the number. */
 export const formatAmount = (amount: number): string =>
-  amount === 1 ? 'full' : amount === 0.5 ? 'half' : String(amount);
+  amount === 0 ? 'none' : amount === 1 ? 'full' : amount === 0.5 ? 'half' : String(amount);
 
 /**
  * The `data-optical` mark on the root: "this icon was centred on purpose, at
  * this strength". Returns the strength, or `undefined` when unmarked or garbled.
  * A data attribute, not a comment — svgo strips comments and keeps `data-*`.
+ *
+ * `none` / `0` means "left uncorrected on purpose": an icon beside text, where
+ * the eye measures the gap to the word, not the centre. `--fix` never writes
+ * it (its strength is above 0) — it is set by hand.
  */
 export const readOpticalMark = (svg: string): number | undefined => {
-  const value = /\sdata-optical\s*=\s*["']([^"']+)["']/i.exec(ROOT.exec(svg)?.[0] ?? '')?.[1];
-  if (value === undefined) return undefined;
+  const value = /\sdata-optical\s*=\s*["']([^"']+)["']/i.exec(ROOT.exec(svg)?.[0] ?? '')?.[1]?.trim();
+  if (value === undefined || value === '') return undefined; // Number(' ') is 0 — a typo, not a decision
+  if (value === 'none') return 0;
   if (value === 'full') return 1;
   if (value === 'half') return 0.5;
   const amount = Number(value);
-  return amount > 0 && amount <= 1 ? amount : undefined;
+  return amount >= 0 && amount <= 1 ? amount : undefined;
 };
 
 /** Set (or replace) the `data-optical` mark on the root. */
