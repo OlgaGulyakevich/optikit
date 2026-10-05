@@ -21,6 +21,14 @@ export interface ViewBox {
   readonly height: number;
 }
 
+/** A box in viewBox units: where the ink actually is. */
+export interface Bounds {
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+}
+
 /** How far the ink centre sits from the canvas centre. */
 export interface InkOffset {
   /** In viewBox units — what goes into `translate()`. */
@@ -62,19 +70,53 @@ export const inkCenter = (alpha: Uint8Array, width: number, height: number): Poi
 };
 
 /**
- * Convert a pixel ink centre into an offset from the canvas centre.
+ * Bounding box of the ink, in pixels (pixel `i` spans `[i, i + 1)`).
+ * Every pixel with any coverage counts. A sharp tip covers its last pixels
+ * only partly — drop those and the box comes up short, the grown canvas ends
+ * just before the tip, and the tip gets cut. Erring a fraction of a pixel wide
+ * is the safe direction.
+ */
+export const inkBounds = (alpha: Uint8Array, width: number, height: number): Bounds | undefined => {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if ((alpha[y * width + x] ?? 0) === 0) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + 1);
+      maxY = Math.max(maxY, y + 1);
+    }
+  }
+
+  return minX === Infinity ? undefined : { minX, minY, maxX, maxY };
+};
+
+/** A canvas grown by `share` of its longer side on every edge. */
+export const padViewBox = (box: ViewBox, share: number): ViewBox => {
+  const pad = Math.max(box.width, box.height) * share;
+  return { minX: box.minX - pad, minY: box.minY - pad, width: box.width + 2 * pad, height: box.height + 2 * pad };
+};
+
+/** Pixel coordinates of a render of `box` → viewBox units. */
+export const toUnits = (point: Point, render: { readonly width: number; readonly height: number }, box: ViewBox): Point => ({
+  x: box.minX + (point.x / render.width) * box.width,
+  y: box.minY + (point.y / render.height) * box.height,
+});
+
+/**
+ * Offset of the ink centre (viewBox units) from the canvas centre.
  * Positive x = ink sits right of centre, positive y = below.
  */
-export const inkOffset = (
-  center: Point,
-  render: { readonly width: number; readonly height: number },
-  viewBox: ViewBox,
-): InkOffset => {
-  const fx = center.x / render.width - 0.5; // −0.5 … 0.5 of the canvas
-  const fy = center.y / render.height - 0.5;
+export const inkOffset = (ink: Point, viewBox: ViewBox): InkOffset => {
+  const x = ink.x - (viewBox.minX + viewBox.width / 2);
+  const y = ink.y - (viewBox.minY + viewBox.height / 2);
   return {
-    units: { x: fx * viewBox.width, y: fy * viewBox.height },
-    percent: { x: fx * 100, y: fy * 100 },
+    units: { x, y },
+    percent: { x: (x / viewBox.width) * 100, y: (y / viewBox.height) * 100 },
   };
 };
 
@@ -93,6 +135,84 @@ export const verdictFor = (offset: InkOffset, thresholdPercent: number, stroked:
 export const correctionFor = (offset: InkOffset, amount: number): Point => {
   const round = (value: number) => Math.round(value * 100) / 100 || 0; // `|| 0` turns −0 into 0
   return { x: round(-offset.units.x * amount), y: round(-offset.units.y * amount) };
+};
+
+/**
+ * How a correction gets into the file:
+ * - `translate` — the drawing moves inside its canvas (it fits);
+ * - `viewBox` — the drawing would cross the edge, so the canvas grows and
+ *   re-centres on the target instead. Same visual result, nothing cut off —
+ *   but in the same CSS box the drawing renders smaller by `shrink` (0–1).
+ */
+export type FixPlan =
+  | { readonly kind: 'translate'; readonly shift: Point }
+  | { readonly kind: 'viewBox'; readonly shift: Point; readonly viewBox: ViewBox; readonly shrink: number };
+
+/**
+ * Choose how to apply `shift` without cutting the drawing. `ink` is where the
+ * drawing really is (measured on a padded canvas); `tolerance` absorbs
+ * rendering error so a shape exactly on the edge still counts as fitting.
+ *
+ * The grown canvas is centred where the shift says the eye wants the centre,
+ * and is never smaller than the original on either axis — it only zooms out.
+ */
+export const planFix = (ink: Bounds, box: ViewBox, shift: Point, tolerance: number): FixPlan => {
+  const fits =
+    ink.minX + shift.x >= box.minX - tolerance &&
+    ink.maxX + shift.x <= box.minX + box.width + tolerance &&
+    ink.minY + shift.y >= box.minY - tolerance &&
+    ink.maxY + shift.y <= box.minY + box.height + tolerance;
+  if (fits) return { kind: 'translate', shift };
+
+  // Moving the drawing by +shift ≡ moving the canvas centre by −shift.
+  const cx = box.minX + box.width / 2 - shift.x;
+  const cy = box.minY + box.height / 2 - shift.y;
+  const halfW = Math.max(box.width / 2, cx - ink.minX, ink.maxX - cx);
+  const halfH = Math.max(box.height / 2, cy - ink.minY, ink.maxY - cy);
+
+  const down = (value: number) => Math.floor(value * 100) / 100; // round outward:
+  const up = (value: number) => Math.ceil(value * 100) / 100; // never trim ink
+  const minX = down(cx - halfW);
+  const minY = down(cy - halfH);
+  const viewBox = { minX, minY, width: up(cx + halfW) - minX, height: up(cy + halfH) - minY };
+  const round = (value: number) => Math.round(value * 100) / 100;
+
+  return {
+    kind: 'viewBox',
+    shift,
+    viewBox: { minX: round(viewBox.minX), minY: round(viewBox.minY), width: round(viewBox.width), height: round(viewBox.height) },
+    shrink: 1 - Math.min(box.width / viewBox.width, box.height / viewBox.height),
+  };
+};
+
+/**
+ * Check a fixed icon against what the fix promised. Measured on a padded
+ * canvas, so this can actually fail: ink past the edge shows up as ink past
+ * the edge, not as a clipped drawing that happens to look centred.
+ *
+ * @param expected - where the ink centre should land, relative to the new canvas centre
+ * @returns why the fix failed, or `undefined` when it holds
+ */
+export const verifyFix = (
+  expected: Point,
+  after: { readonly offset: InkOffset; readonly ink: Bounds; readonly viewBox: ViewBox },
+  tolerance: number,
+): string | undefined => {
+  const { ink, viewBox: box } = after;
+  if (
+    ink.minX < box.minX - tolerance ||
+    ink.minY < box.minY - tolerance ||
+    ink.maxX > box.minX + box.width + tolerance ||
+    ink.maxY > box.minY + box.height + tolerance
+  ) {
+    return 'the drawing crosses the canvas edge — it would be cut off';
+  }
+
+  const { x, y } = after.offset.units;
+  if (Math.abs(x - expected.x) > tolerance || Math.abs(y - expected.y) > tolerance) {
+    return `ink centre landed at (${x.toFixed(2)}, ${y.toFixed(2)}), expected (${expected.x.toFixed(2)}, ${expected.y.toFixed(2)})`;
+  }
+  return undefined;
 };
 
 /** The opening `<svg …>` tag — every helper below only touches the root. */
@@ -125,6 +245,44 @@ export const sizeForRender = (svg: string, width: number, height: number): strin
     const bare = root.replace(/\s(width|height)\s*=\s*["'][^"']*["']/gi, '');
     return bare.replace(/^<svg\b/i, `<svg width="${width}" height="${height}"`);
   });
+
+/** Set (or add) the root `viewBox`. */
+export const withViewBox = (svg: string, box: ViewBox): string =>
+  svg.replace(ROOT, (root) => {
+    const value = `${box.minX} ${box.minY} ${box.width} ${box.height}`;
+    return /\sviewBox\s*=/i.test(root)
+      ? root.replace(/(\sviewBox\s*=\s*)(["'])[^"']*\2/i, `$1"${value}"`)
+      : root.replace(/^<svg\b/i, `<svg viewBox="${value}"`);
+  });
+
+/** `--amount` as written in the mark: `full`, `half`, or the number. */
+export const formatAmount = (amount: number): string =>
+  amount === 1 ? 'full' : amount === 0.5 ? 'half' : String(amount);
+
+/**
+ * The `data-optical` mark on the root: "this icon was centred on purpose, at
+ * this strength". Returns the strength, or `undefined` when unmarked or garbled.
+ * A data attribute, not a comment — svgo strips comments and keeps `data-*`.
+ */
+export const readOpticalMark = (svg: string): number | undefined => {
+  const value = /\sdata-optical\s*=\s*["']([^"']+)["']/i.exec(ROOT.exec(svg)?.[0] ?? '')?.[1];
+  if (value === undefined) return undefined;
+  if (value === 'full') return 1;
+  if (value === 'half') return 0.5;
+  const amount = Number(value);
+  return amount > 0 && amount <= 1 ? amount : undefined;
+};
+
+/** Set (or replace) the `data-optical` mark on the root. */
+export const writeOpticalMark = (svg: string, amount: number): string =>
+  svg.replace(ROOT, (root) => {
+    const bare = root.replace(/\sdata-optical\s*=\s*["'][^"']*["']/i, '');
+    return bare.replace(/^<svg\b/i, `<svg data-optical="${formatAmount(amount)}"`);
+  });
+
+/** Apply a fix plan to SVG text: move the drawing, or grow and re-centre the canvas. */
+export const applyFixPlan = (svg: string, plan: FixPlan): string =>
+  plan.kind === 'translate' ? wrapInTranslate(svg, plan.shift) : withViewBox(svg, plan.viewBox);
 
 /** Whether any element is stroked (a `stroke` other than `none`, as attribute or style). */
 export const hasStrokes = (svg: string): boolean =>

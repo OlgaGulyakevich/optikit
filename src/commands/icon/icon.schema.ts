@@ -13,14 +13,16 @@ export const auditSchema = z.object({
   fix: z.boolean().default(false),
   /**
    * Share of the full correction to apply. The centre of mass is the upper
-   * bound; a static icon sometimes looks right at 0.75. A rotating one needs `full`.
+   * bound, not the target: a static icon in a small badge is also judged by the
+   * gaps to the badge edges, and at `full` it looked over-shifted — hence `half`.
+   * A rotating icon needs `full`, or it swings in an arc.
    */
   amount: z
     .union([
       z.enum(['full', 'half']).transform((name) => AMOUNTS[name]),
       z.coerce.number().gt(0).max(1),
     ], { error: 'expected full, half, or a number above 0 and up to 1 (e.g. 0.75)' })
-    .default(1),
+    .default(0.5),
   /** Offsets below this % of the canvas are left alone (even-stroke chevrons land ~0.8%). */
   threshold: z.coerce.number().min(0).max(50).default(1),
   /** Apply this icon's correction instead of each file's own — keeps state pairs aligned. */

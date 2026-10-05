@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { optimize } from 'svgo';
 import type { Tool, ToolResult } from '../core/tool.js';
-import { wrapInTranslate, type Point } from '../utils/optical-center.js';
+import { applyFixPlan, writeOpticalMark, type FixPlan } from '../utils/optical-center.js';
 
 /** One svgo operation: read `input` SVG, optimize, write to `output`. */
 export interface SvgoJob {
@@ -9,8 +9,12 @@ export interface SvgoJob {
   output: string;
   /** Keep executable content instead of stripping it. Default: strip. */
   keepScripts?: boolean;
-  /** Move the whole icon by this many viewBox units; svgo bakes it into the paths. */
-  translate?: Point;
+  /**
+   * Optical centring from `icon audit --fix`: move the drawing (svgo bakes the
+   * translate into the paths) or grow the canvas, then mark the file with the
+   * strength used so the next audit knows it was centred on purpose.
+   */
+  opticalFix?: { plan: FixPlan; amount: number };
 }
 
 /**
@@ -61,7 +65,9 @@ export class SvgoTool implements Tool<SvgoJob> {
   async run(job: SvgoJob): Promise<ToolResult> {
     const svg = await readFile(job.input, 'utf8');
     const strip = !job.keepScripts;
-    const source = job.translate ? wrapInTranslate(svg, job.translate) : svg;
+    const source = job.opticalFix
+      ? writeOpticalMark(applyFixPlan(svg, job.opticalFix.plan), job.opticalFix.amount)
+      : svg;
 
     let data: string;
     try {

@@ -3,8 +3,16 @@ import { renderAlpha } from '../tools/sharp.tool.js';
 import {
   correctionFor,
   hasStrokes,
+  inkBounds,
   inkCenter,
   inkOffset,
+  padViewBox,
+  planFix,
+  readOpticalMark,
+  toUnits,
+  verifyFix,
+  withViewBox,
+  writeOpticalMark,
   parseViewBox,
   sizeForRender,
   verdictFor,
@@ -54,13 +62,118 @@ describe('inkCenter', () => {
   });
 });
 
-describe('inkOffset', () => {
-  it('converts pixels to viewBox units and % of the canvas', () => {
-    const offset = inkOffset({ x: 300, y: 280 }, { width: 560, height: 560 }, { minX: 0, minY: 0, width: 28, height: 28 });
+const CANVAS_28 = { minX: 0, minY: 0, width: 28, height: 28 };
 
-    expect(offset.units.x).toBeCloseTo(1); // 20 px per unit
+describe('toUnits + inkOffset', () => {
+  it('converts pixels to viewBox units, then to an offset in units and %', () => {
+    const ink = toUnits({ x: 300, y: 280 }, { width: 560, height: 560 }, CANVAS_28); // 20 px per unit
+    const offset = inkOffset(ink, CANVAS_28);
+
+    expect(offset.units.x).toBeCloseTo(1);
     expect(offset.units.y).toBeCloseTo(0);
     expect(offset.percent.x).toBeCloseTo(3.571, 3);
+  });
+
+  it('respects a padded canvas that starts below zero', () => {
+    const padded = padViewBox(CANVAS_28, 0.5); // −14 … 42
+    expect(padded).toEqual({ minX: -14, minY: -14, width: 56, height: 56 });
+    expect(toUnits({ x: 0, y: 1120 }, { width: 1120, height: 1120 }, padded)).toEqual({ x: -14, y: 42 });
+  });
+});
+
+describe('inkBounds', () => {
+  it('finds the box of the ink in pixel edges', () => {
+    const alpha = paint(10, (x, y) => x > 2 && x < 6 && y > 4 && y < 8); // pixel centres 2.5…5.5, 4.5…7.5
+    expect(inkBounds(alpha, 10, 10)).toEqual({ minX: 2, minY: 4, maxX: 6, maxY: 8 });
+  });
+
+  it('counts a faintly covered pixel — a sharp tip is ink too', () => {
+    const alpha = paint(10, (x, y) => x > 2 && x < 6 && y > 4 && y < 8);
+    alpha[5 * 10 + 8] = 30; // the thin tip of a wedge: barely covered, still drawn
+    expect(inkBounds(alpha, 10, 10)?.maxX).toBe(9);
+  });
+
+  it('returns undefined for a blank image', () => {
+    expect(inkBounds(new Uint8Array(16), 4, 4)).toBeUndefined();
+  });
+});
+
+describe('planFix', () => {
+  const box = { minX: 0, minY: 0, width: 14, height: 12 };
+
+  it('moves the drawing when it still fits after the shift', () => {
+    const ink = { minX: 2, minY: 2, maxX: 10, maxY: 10 };
+    expect(planFix(ink, box, { x: 1, y: 0 }, 0.07)).toEqual({ kind: 'translate', shift: { x: 1, y: 0 } });
+  });
+
+  it('grows the canvas instead when the shift would push ink past the edge', () => {
+    // Wedge touching left/right edges; shift right by 2.33 would cut its tip.
+    const ink = { minX: 0, minY: 0, maxX: 14, maxY: 12 };
+    const plan = planFix(ink, box, { x: 2.33, y: 0 }, 0.07);
+    if (plan.kind !== 'viewBox') throw new Error('expected a viewBox plan');
+
+    // New centre = 7 − 2.33 = 4.67; half-width = 14 − 4.67 = 9.33 → −4.66 … 14.
+    expect(plan.viewBox.minX).toBeCloseTo(-4.66, 2);
+    expect(plan.viewBox.width).toBeCloseTo(18.67, 1);
+    expect(plan.viewBox.height).toBe(12); // never shrinks an axis
+    expect(plan.shrink).toBeCloseTo(1 - 14 / 18.67, 2); // ~25% smaller in the same box
+  });
+
+  it('counts a shape lying exactly on the edge as fitting (tolerance)', () => {
+    const ink = { minX: -0.03, minY: 0, maxX: 13, maxY: 12.04 };
+    expect(planFix(ink, box, { x: 0.5, y: 0 }, 0.07).kind).toBe('translate');
+  });
+});
+
+describe('verifyFix', () => {
+  const box = { minX: 0, minY: 0, width: 14, height: 12 };
+  const offsetAt = (x: number, y: number) => ({ units: { x, y }, percent: { x: (x / 14) * 100, y: (y / 12) * 100 } });
+  const inside = { minX: 1, minY: 1, maxX: 13, maxY: 11 };
+
+  it('passes when the ink landed where promised and nothing crosses the edge', () => {
+    expect(verifyFix({ x: 0, y: 0 }, { offset: offsetAt(0.02, 0), ink: inside, viewBox: box }, 0.07)).toBeUndefined();
+  });
+
+  it('fails when ink crosses the edge — the bug it exists to catch', () => {
+    const cut = { ...inside, maxX: 15.2 };
+    expect(verifyFix({ x: 0, y: 0 }, { offset: offsetAt(0, 0), ink: cut, viewBox: box }, 0.07)).toMatch(/cut off/);
+  });
+
+  it('fails when the centre missed the target', () => {
+    expect(verifyFix({ x: 0, y: 0 }, { offset: offsetAt(0.6, 0), ink: inside, viewBox: box }, 0.07)).toMatch(/expected/);
+  });
+});
+
+describe('optical mark', () => {
+  const svg = '<svg viewBox="0 0 24 24"><path d="M0 0h1"/></svg>';
+
+  it.each([
+    [1, 'full'],
+    [0.5, 'half'],
+    [0.75, '0.75'],
+  ])('writes amount %d as "%s" and reads it back', (amount, text) => {
+    const marked = writeOpticalMark(svg, amount);
+    expect(marked).toContain(`data-optical="${text}"`);
+    expect(readOpticalMark(marked)).toBe(amount);
+  });
+
+  it('replaces an old mark instead of adding a second one', () => {
+    const twice = writeOpticalMark(writeOpticalMark(svg, 1), 0.5);
+    expect(twice.match(/data-optical/g)).toHaveLength(1);
+    expect(readOpticalMark(twice)).toBe(0.5);
+  });
+
+  it('ignores a missing or garbled mark', () => {
+    expect(readOpticalMark(svg)).toBeUndefined();
+    expect(readOpticalMark('<svg data-optical="lots">')).toBeUndefined();
+  });
+});
+
+describe('withViewBox', () => {
+  it('replaces the root viewBox, or adds one', () => {
+    const box = { minX: -1, minY: 0, width: 16.5, height: 12 };
+    expect(withViewBox('<svg viewBox="0 0 14 12"><g/></svg>', box)).toBe('<svg viewBox="-1 0 16.5 12"><g/></svg>');
+    expect(withViewBox('<svg width="14"><g/></svg>', box)).toBe('<svg viewBox="-1 0 16.5 12" width="14"><g/></svg>');
   });
 });
 
@@ -139,7 +252,7 @@ describe('triangle through sharp', () => {
     if (!center) throw new Error('rendered blank');
 
     // Centroid y = (7.5 + 7.5 + 24) / 3 = 13; canvas centre 14 → shift down by 1.
-    const offset = inkOffset(center, render, { minX: 0, minY: 0, width: 28, height: 28 });
+    const offset = inkOffset(toUnits(center, render, CANVAS_28), CANVAS_28);
     expect(correctionFor(offset, 1)).toEqual({ x: 0, y: 1 });
   });
 });

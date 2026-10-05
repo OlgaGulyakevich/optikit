@@ -10,8 +10,10 @@ describe('auditSchema --amount', () => {
     expect(auditSchema.parse({ input: 'icons', amount }).amount).toBe(expected);
   });
 
-  it('defaults to the full correction, report-only, 1% threshold', () => {
-    expect(auditSchema.parse({ input: 'icons' })).toMatchObject({ amount: 1, fix: false, threshold: 1 });
+  // half, not full: a static icon in a 36px badge looked over-shifted at full
+  // (Telegram on Yulia's site, 05.10.2026). full stays opt-in, for rotating icons.
+  it('defaults to half the correction, report-only, 1% threshold', () => {
+    expect(auditSchema.parse({ input: 'icons' })).toMatchObject({ amount: 0.5, fix: false, threshold: 1 });
   });
 
   it.each(['0', '1.5', 'most'])('rejects %s', (amount) => {
