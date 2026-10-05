@@ -223,7 +223,8 @@ centre — in viewBox units and in % of the canvas:
 ⚠ icons/ui/telegram.svg — ink off by x +1.28, y -0.43 (+9.11%, -3.61%) → shift translate(-0.64 0.22)
   would cut the drawing off — grow the canvas to viewBox="0 -0.22 15.28 12" instead
   (renders ~8% smaller in the same box)
-✓ icons/marker/triangle.svg — centred on purpose (half), 1.8% left by design   ← after --fix
+✓ icons/marker/triangle.svg — centred on purpose (half), 1.8% off centre by design   ← after --fix
+✓ icons/ui/telegram.svg — left as drawn on purpose (none), 9.1% off centre by design
 ```
 
 - **Report by default.** `--fix` writes corrected copies to `--out`; sources are
@@ -245,6 +246,10 @@ centre — in viewBox units and in % of the canvas:
   on the root `<svg>`. A marked icon is reported as centred on purpose and is never
   fixed twice. Tuned an icon by hand? Add the mark yourself, and the audit leaves it
   alone instead of flagging the residual.
+- **`data-optical="none"`** (or `"0"`) — left uncorrected on purpose. For an icon
+  **beside text**: there the eye measures the gap from the drawing to the word, not
+  the centre, so the right correction is none. `--fix` never writes this mark — it is
+  a decision you make by hand.
 - `--threshold <percent>` — offsets below this are left alone (default `1`).
   Even-stroke chevrons land around 0.8%.
 - `--same-as <file>` — apply one icon's shift to every input. For state pairs

@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [0.6.1] — 2026-10-05
+
+### Fixed
+
+- `icon audit` accepts `data-optical="none"` (or `"0"`) as a mark: left uncorrected
+  on purpose. An icon beside text is aligned by the gap to the word, not by its
+  centre; before, `"0"` was not recognised and the icon kept showing up as "to shift".
+  Marked icons now read `left as drawn on purpose (none)`, and every marked icon
+  reports its offset as `… off centre by design`.
+- A blank `data-optical=" "` no longer counts as a mark (`Number(' ')` is `0` in
+  JavaScript — a typo must not pass for a decision).
+
 ## [0.6.0] — 2026-10-05
 
 ### Changed
@@ -133,6 +145,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `video convert` / `video compress` (ffmpeg → mp4, `--max`), `svg` (svgo) and
   `favicon` (full set + `.ico` + manifest + `<link>` snippet).
 
+[0.6.1]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.6.1
 [0.6.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.6.0
 [0.5.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.5.0
 [0.4.0]: https://github.com/OlgaGulyakevich/optikit/releases/tag/v0.4.0
