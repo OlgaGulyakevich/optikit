@@ -19,6 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
+    "check:fast": "tsc --noEmit && eslint . && gitleaks detect --redact --no-banner",
+    "check:full": "npm run check:fast && npm test && npm audit --omit=dev --audit-level=high && npm run build",
     "prepublishOnly": "npm run lint && npm test && npm run build"
   },
   "keywords": [
