@@ -175,6 +175,7 @@ optikit svg ./icons --keep-scripts          # keep interactive/animated SVGs int
 ```bash
 optikit favicon logo.svg --out ./public
 optikit favicon logo.svg --background "#c8ff00"
+optikit favicon logo.svg --artwork          # + an opaque square for the iOS player card
 ```
 
 Generates from a single source (SVG or a large square PNG):
@@ -189,7 +190,16 @@ site.webmanifest          favicon-snippet.html
 - Prints (and saves) a ready-to-paste `<head>` snippet.
 - **`apple-touch-icon.png` is always opaque.** iOS rounds the corners itself and shows transparency as white, so a rounded source gets white corners on the home screen. The icon's own plate colour continues into the corners. A logo with no solid plate goes on white, with a warning, and so does a plate with a see-through cut-out, because filling it would erase the logo. `--background <hex>` picks the colour.
 - The other icons keep their transparency: browsers and desktop PWAs draw them as they are.
-- A page with audio or video needs one more step. iOS can pick a rounded site icon for its "Now Playing" card on its own, so set an opaque square as artwork through `navigator.mediaSession.metadata`.
+- **`--artwork`** is for pages with audio or video. iOS can pick a rounded site icon for its "Now Playing" card on its own, and then the white corners are back. The flag writes `media-artwork-512.png`, an opaque square with the same fill, under its own name because iOS caches icons by address. Set it when playback starts:
+
+```js
+video.addEventListener('play', () => {
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: document.title,
+    artwork: [{ src: '/media-artwork-512.png', sizes: '512x512', type: 'image/png' }],
+  });
+});
+```
 
 ### `trim`: crop transparent padding
 
@@ -314,6 +324,6 @@ MIT
 **Olga Gulyakevich**, Frontend Developer
 
 [![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/OlgaGulyakevich)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/olga-gulyakevich-ab166674/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/olga-gulyakevich/)
 
 <br clear="left"/>

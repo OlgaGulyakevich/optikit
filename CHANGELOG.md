@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [0.8.0] - 2026-11-04
+
+### Added
+
+- `favicon --artwork` writes `media-artwork-512.png`, an opaque square for the iOS "Now Playing" card, and prints the Media Session snippet. An opaque `apple-touch-icon.png` does not settle that card: without artwork iOS picks a site icon on its own. Off by default.
+
 ## [0.7.0] - 2026-11-04
 
 ### Added

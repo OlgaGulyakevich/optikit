@@ -45,7 +45,8 @@
     "web-safe",
     "placeholder",
     "lqip",
-    "apple-touch-icon"
+    "apple-touch-icon",
+    "media-session"
   ],
   "author": "Olga Gulyakevich",
   "license": "MIT",
