@@ -13,6 +13,10 @@ import { chooseBackground } from '../../utils/icon-background.js';
 import { faviconSchema } from './favicon.schema.js';
 
 const APPLE_TOUCH = { size: 180, name: 'apple-touch-icon.png' } as const;
+/** A name of its own: iOS caches icons by address, so a new one is what shows up. */
+const ARTWORK = { size: 512, name: 'media-artwork-512.png' } as const;
+/** Icons that may not stay transparent. */
+const OPAQUE: readonly string[] = [APPLE_TOUCH.name, ARTWORK.name];
 /** Same outcome as leaving the corners transparent, which iOS shows as white, but stated. */
 const FALLBACK_BACKGROUND = '#ffffff';
 
@@ -36,6 +40,12 @@ const MANIFEST = {
   ],
 };
 
+/** How a page hands the artwork to iOS, printed when `--artwork` is on. */
+const ARTWORK_SNIPPET = `navigator.mediaSession.metadata = new MediaMetadata({
+  title: document.title,
+  artwork: [{ src: '/${ARTWORK.name}', sizes: '512x512', type: 'image/png' }],
+});`;
+
 /** Build the `<head>` markup; includes the SVG icon only when one was produced. */
 const headSnippet = (hasSvg: boolean): string =>
   [
@@ -48,12 +58,12 @@ const headSnippet = (hasSvg: boolean): string =>
   ].join('\n');
 
 /**
- * The fill for apple-touch-icon.png. iOS masks the corners itself and shows any
+ * The fill for the opaque icons. iOS masks the corners itself and shows any
  * transparency as white, so a rounded source gets white corners on the home screen.
- * This is the only icon filled: browsers and desktop PWAs draw the others as they
- * are, and their transparent corners look right there.
+ * Only these are filled: browsers and desktop PWAs draw the others as they are, and
+ * their transparent corners look right there.
  */
-const resolveAppleBackground = async (
+const resolveOpaqueBackground = async (
   input: string,
   chosen: string | undefined,
 ): Promise<{ color?: string; note?: string; warning?: string }> => {
@@ -68,7 +78,7 @@ const resolveAppleBackground = async (
     case 'no-plate':
       return {
         color: FALLBACK_BACKGROUND,
-        warning: `${APPLE_TOUCH.name}: no solid plate to continue, so the transparency is on white. Choose a colour with --background <hex>.`,
+        warning: 'Opaque icons: no solid plate to continue, so the transparency is on white. Choose a colour with --background <hex>.',
       };
   }
 };
@@ -82,7 +92,8 @@ export const faviconCommand: CliCommand = {
       .command('favicon <input>')
       .description('Generate a full favicon set (+ .ico, manifest, <head> snippet) from one image.')
       .option('-o, --out <dir>', 'output directory (default: optimized)')
-      .option('--background <hex>', "fill behind apple-touch-icon.png (default: the source's plate colour, else white)")
+      .option('--background <hex>', "fill behind the opaque icons (default: the source's plate colour, else white)")
+      .option('--artwork', `also write ${ARTWORK.name}: an opaque square for the iOS "Now Playing" card`)
       .action(async (input: string, options: Record<string, unknown>) => {
         await faviconCommand.run({ input, ...options });
       });
@@ -95,23 +106,23 @@ export const faviconCommand: CliCommand = {
     const isSvgSource = config.input.toLowerCase().endsWith('.svg');
     const sharpTool = createTool('sharp');
     const icoTool = createTool('ico');
-    const apple = await resolveAppleBackground(config.input, config.background);
+    const opaque = await resolveOpaqueBackground(config.input, config.background);
+    if (opaque.warning !== undefined) logger.warn(opaque.warning);
 
     // 1. Render the source into each PNG size (sharp).
-    for (const { size, name } of PNG_ICONS) {
+    for (const { size, name } of config.artwork ? [...PNG_ICONS, ARTWORK] : PNG_ICONS) {
       const output = join(config.out, name);
-      const isApple = name === APPLE_TOUCH.name;
+      const isOpaque = OPAQUE.includes(name);
       const job: SharpJob = {
         input: config.input,
         output,
         format: 'png',
         quality: 100,
         resize: { width: size, height: size, fit: 'cover' },
-        ...(isApple && apple.color !== undefined ? { background: apple.color } : {}),
+        ...(isOpaque && opaque.color !== undefined ? { background: opaque.color } : {}),
       };
       await sharpTool.run(job);
-      logger.success(isApple && apple.note !== undefined ? `${output} (${apple.note})` : output);
-      if (isApple && apple.warning !== undefined) logger.warn(apple.warning);
+      logger.success(isOpaque && opaque.note !== undefined ? `${output} (${opaque.note})` : output);
     }
 
     // 2. Pack the small PNGs into favicon.ico (png-to-ico).
@@ -142,6 +153,9 @@ export const faviconCommand: CliCommand = {
     logger.success(snippetOutput);
 
     logger.info(`\nDone: favicon set written to "${config.out}".\n\nAdd to your <head>:\n\n${snippet}\n`);
+    if (config.artwork) {
+      logger.info(`Set the artwork when playback starts, so iOS does not pick a rounded icon:\n\n${ARTWORK_SNIPPET}\n`);
+    }
     if (!isSvgSource) {
       logger.info('Tip: pass an SVG source to also get a scalable favicon.svg.\n');
     }

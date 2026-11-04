@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -57,5 +57,41 @@ describe('favicon apple-touch-icon', () => {
   it('lets --background override the plate colour', async () => {
     const out = await run(ROUNDED_LIME, 'chosen', { background: '#102030' });
     expect(await corner(join(out, 'apple-touch-icon.png'))).toEqual([16, 32, 48, 255]);
+  });
+});
+
+describe('favicon --artwork', () => {
+  const ARTWORK = 'media-artwork-512.png';
+
+  it('is not written by default', async () => {
+    const out = await run(ROUNDED_LIME, 'no-artwork');
+    expect(await readdir(out)).not.toContain(ARTWORK);
+  });
+
+  it('writes a 512 px square with the plate colour in its corners', async () => {
+    const out = await run(ROUNDED_LIME, 'artwork', { artwork: true });
+    const { width, height } = await sharp(join(out, ARTWORK)).metadata();
+    expect({ width, height }).toEqual({ width: 512, height: 512 });
+    expect(await corner(join(out, ARTWORK))).toEqual([200, 255, 0, 255]);
+  });
+
+  it('follows --background, like apple-touch-icon', async () => {
+    const out = await run(ROUNDED_LIME, 'artwork-chosen', { artwork: true, background: '#102030' });
+    expect(await corner(join(out, ARTWORK))).toEqual([16, 32, 48, 255]);
+  });
+
+  it('puts a bare glyph on white rather than leaving it transparent', async () => {
+    const out = await run(BARE_GLYPH, 'artwork-glyph', { artwork: true });
+    expect(await corner(join(out, ARTWORK))).toEqual([255, 255, 255, 255]);
+  });
+
+  // The whole point of the separate name: iOS caches icons by address.
+  it('is its own file, not a resized apple-touch-icon', async () => {
+    const out = await run(ROUNDED_LIME, 'artwork-apple', { artwork: true });
+    const [apple, artwork] = await Promise.all([
+      sharp(join(out, 'apple-touch-icon.png')).metadata(),
+      sharp(join(out, ARTWORK)).metadata(),
+    ]);
+    expect([apple.width, artwork.width]).toEqual([180, 512]);
   });
 });

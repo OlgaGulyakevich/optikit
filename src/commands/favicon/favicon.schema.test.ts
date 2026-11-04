@@ -3,7 +3,11 @@ import { faviconSchema } from './favicon.schema.js';
 
 describe('faviconSchema', () => {
   it('fills defaults when only input is given', () => {
-    expect(faviconSchema.parse({ input: 'logo.svg' })).toEqual({ input: 'logo.svg', out: 'optimized' });
+    expect(faviconSchema.parse({ input: 'logo.svg' })).toEqual({
+      input: 'logo.svg',
+      out: 'optimized',
+      artwork: false, // off by default: most sites have no player, and the set must not grow for them
+    });
   });
 
   it('accepts a hex colour, with or without the #', () => {

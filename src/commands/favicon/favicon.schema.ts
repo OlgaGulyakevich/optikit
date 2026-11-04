@@ -15,7 +15,9 @@ export const faviconSchema = z.object({
   input: z.string().min(1),
   /** Output directory for the favicon set. */
   out: z.string().default('optimized'),
-  /** Fill behind apple-touch-icon.png. Omitted: continue the source's plate, else white. */
+  /** Also write media-artwork-512.png, an opaque square for Media Session. */
+  artwork: z.boolean().default(false),
+  /** Fill behind the opaque icons. Omitted: continue the source's plate, else white. */
   background: z.string().regex(HEX_COLOUR, 'use a hex colour, e.g. "#c8ff00"').transform(toFullHex).optional(),
 });
 
