@@ -37,7 +37,8 @@ export interface SharpJob {
  */
 export class SharpTool implements Tool<SharpJob> {
   async run(job: SharpJob): Promise<ToolResult> {
-    const pipeline = sharp(job.input);
+    // Encoders drop the EXIF tag, so without this a phone photo comes out on its side.
+    const pipeline = sharp(job.input, { autoOrient: true });
 
     if (job.trim !== undefined) {
       pipeline.trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: job.trim });
@@ -46,10 +47,8 @@ export class SharpTool implements Tool<SharpJob> {
     if (job.resize) {
       pipeline.resize(job.resize.width, job.resize.height, { fit: job.resize.fit });
     } else if (job.scale && job.scale !== 1) {
-      const { width } = await pipeline.metadata();
-      if (width) {
-        pipeline.resize(Math.round(width * job.scale));
-      }
+      const { autoOrient } = await pipeline.metadata();
+      pipeline.resize(Math.round(autoOrient.width * job.scale));
     }
 
     if (job.background !== undefined) {
@@ -86,7 +85,7 @@ export const renderAlpha = async (
 
 /** Render an image to a `side`×`side` square of raw RGBA, cropped the way the favicon sizes are. */
 export const renderRgba = async (input: string, side: number): Promise<Uint8Array> => {
-  const data = await sharp(input).resize(side, side, { fit: 'cover' }).ensureAlpha().raw().toBuffer();
+  const data = await sharp(input, { autoOrient: true }).resize(side, side, { fit: 'cover' }).ensureAlpha().raw().toBuffer();
   return new Uint8Array(data);
 };
 
@@ -107,14 +106,14 @@ export const encodePlaceholder = async (
   image: Buffer,
   { maxWidth, quality, width }: { maxWidth: number; quality: number; width?: number },
 ): Promise<Placeholder> => {
-  const { width: frameWidth, height: frameHeight } = await sharp(image).metadata();
-  const small = await sharp(image)
-    .resize({ width: width ?? placeholderWidthFor(Math.min(frameWidth, maxWidth)), withoutEnlargement: true })
+  const { autoOrient: frame } = await sharp(image).metadata();
+  const small = await sharp(image, { autoOrient: true })
+    .resize({ width: width ?? placeholderWidthFor(Math.min(frame.width, maxWidth)), withoutEnlargement: true })
     .webp({ quality, effort: 6 })
     .toBuffer();
   return {
     placeholder: `data:image/webp;base64,${small.toString('base64')}`,
-    aspectRatio: aspectRatioOf(frameWidth, frameHeight),
+    aspectRatio: aspectRatioOf(frame.width, frame.height),
   };
 };
 
