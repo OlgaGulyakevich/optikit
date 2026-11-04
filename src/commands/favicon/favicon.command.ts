@@ -5,17 +5,23 @@ import type { CliCommand } from '../../core/command.js';
 import type { SharpJob } from '../../tools/sharp.tool.js';
 import type { IcoJob } from '../../tools/ico.tool.js';
 import type { SvgoJob } from '../../tools/svgo.tool.js';
+import { renderRgba } from '../../tools/sharp.tool.js';
 import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { ensureDir } from '../../core/file.service.js';
+import { chooseBackground } from '../../utils/icon-background.js';
 import { faviconSchema } from './favicon.schema.js';
+
+const APPLE_TOUCH = { size: 180, name: 'apple-touch-icon.png' } as const;
+/** Same outcome as leaving the corners transparent, which iOS shows as white, but stated. */
+const FALLBACK_BACKGROUND = '#ffffff';
 
 /** PNG sizes to render from the source, with their output names. */
 const PNG_ICONS = [
   { size: 16, name: 'favicon-16x16.png' },
   { size: 32, name: 'favicon-32x32.png' },
   { size: 48, name: 'favicon-48x48.png' },
-  { size: 180, name: 'apple-touch-icon.png' },
+  APPLE_TOUCH,
   { size: 192, name: 'android-chrome-192x192.png' },
   { size: 512, name: 'android-chrome-512x512.png' },
 ] as const;
@@ -41,6 +47,32 @@ const headSnippet = (hasSvg: boolean): string =>
     '<link rel="manifest" href="/site.webmanifest">',
   ].join('\n');
 
+/**
+ * The fill for apple-touch-icon.png. iOS masks the corners itself and shows any
+ * transparency as white, so a rounded source gets white corners on the home screen.
+ * This is the only icon filled: browsers and desktop PWAs draw the others as they
+ * are, and their transparent corners look right there.
+ */
+const resolveAppleBackground = async (
+  input: string,
+  chosen: string | undefined,
+): Promise<{ color?: string; note?: string; warning?: string }> => {
+  if (chosen !== undefined) return { color: chosen, note: `on ${chosen}` };
+
+  const background = chooseBackground(await renderRgba(input, APPLE_TOUCH.size), APPLE_TOUCH.size);
+  switch (background.kind) {
+    case 'opaque':
+      return {};
+    case 'plate':
+      return { color: background.color, note: `corners filled with ${background.color}, the colour of its plate` };
+    case 'no-plate':
+      return {
+        color: FALLBACK_BACKGROUND,
+        warning: `${APPLE_TOUCH.name}: no solid plate to continue, so the transparency is on white. Choose a colour with --background <hex>.`,
+      };
+  }
+};
+
 /** `favicon` — one source image → full favicon set + .ico + manifest + snippet. */
 export const faviconCommand: CliCommand = {
   name: 'favicon',
@@ -50,6 +82,7 @@ export const faviconCommand: CliCommand = {
       .command('favicon <input>')
       .description('Generate a full favicon set (+ .ico, manifest, <head> snippet) from one image.')
       .option('-o, --out <dir>', 'output directory (default: optimized)')
+      .option('--background <hex>', "fill behind apple-touch-icon.png (default: the source's plate colour, else white)")
       .action(async (input: string, options: Record<string, unknown>) => {
         await faviconCommand.run({ input, ...options });
       });
@@ -62,19 +95,23 @@ export const faviconCommand: CliCommand = {
     const isSvgSource = config.input.toLowerCase().endsWith('.svg');
     const sharpTool = createTool('sharp');
     const icoTool = createTool('ico');
+    const apple = await resolveAppleBackground(config.input, config.background);
 
     // 1. Render the source into each PNG size (sharp).
     for (const { size, name } of PNG_ICONS) {
       const output = join(config.out, name);
+      const isApple = name === APPLE_TOUCH.name;
       const job: SharpJob = {
         input: config.input,
         output,
         format: 'png',
         quality: 100,
         resize: { width: size, height: size, fit: 'cover' },
+        ...(isApple && apple.color !== undefined ? { background: apple.color } : {}),
       };
       await sharpTool.run(job);
-      logger.success(output);
+      logger.success(isApple && apple.note !== undefined ? `${output} (${apple.note})` : output);
+      if (isApple && apple.warning !== undefined) logger.warn(apple.warning);
     }
 
     // 2. Pack the small PNGs into favicon.ico (png-to-ico).

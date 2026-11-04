@@ -23,6 +23,8 @@ export interface SharpJob {
   resize?: { width: number; height: number; fit?: ResizeFit };
   /** Trim transparent padding at this threshold (higher = more aggressive). */
   trim?: number;
+  /** Fill all transparency with this colour; the output has no alpha left. */
+  background?: string;
 }
 
 /**
@@ -45,6 +47,10 @@ export class SharpTool implements Tool<SharpJob> {
       if (width) {
         pipeline.resize(Math.round(width * job.scale));
       }
+    }
+
+    if (job.background !== undefined) {
+      pipeline.flatten({ background: job.background });
     }
 
     const encoded =
@@ -72,6 +78,12 @@ export const renderAlpha = async (
     .raw()
     .toBuffer({ resolveWithObject: true });
   return { alpha: new Uint8Array(data), width: info.width, height: info.height };
+};
+
+/** Render an image to a `side`×`side` square of raw RGBA, cropped the way the favicon sizes are. */
+export const renderRgba = async (input: string, side: number): Promise<Uint8Array> => {
+  const data = await sharp(input).resize(side, side, { fit: 'cover' }).ensureAlpha().raw().toBuffer();
+  return new Uint8Array(data);
 };
 
 /** Encode an in-memory image to WebP at `output`, capped at `maxWidth` (never upscaled). */
