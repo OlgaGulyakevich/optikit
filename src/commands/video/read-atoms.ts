@@ -30,10 +30,10 @@ export const describeFailure = (status: Exclude<FaststartStatus, { ok: true }>, 
   const kb = (bytes: number) => `${Math.round(bytes / 1000)} KB`;
   switch (status.reason) {
     case 'moov-after-mdat':
-      return `index (moov) at ${kb(status.moovOffset)} of ${kb(fileSize)} — the first play waits for the end of the file`;
+      return `index (moov) at ${kb(status.moovOffset)} of ${kb(fileSize)}, so the first play waits for the end of the file`;
     case 'no-moov':
-      return 'no index (moov) found — not a valid MP4, or truncated';
+      return 'no index (moov) found: not a valid MP4, or truncated';
     case 'no-mdat':
-      return 'no media data (mdat) found — not a valid MP4, or truncated';
+      return 'no media data (mdat) found: not a valid MP4, or truncated';
   }
 };

@@ -64,6 +64,6 @@ export const trimCommand: CliCommand = {
       logger.success(output);
     }
 
-    logger.info(`Done — ${files.length} image(s) trimmed to "${config.out}".`);
+    logger.info(`Done: ${files.length} image(s) trimmed to "${config.out}".`);
   },
 };

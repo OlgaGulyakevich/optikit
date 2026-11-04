@@ -41,12 +41,12 @@ export const runFaststart = async (raw: unknown): Promise<void> => {
 
     const { status, fileSize } = await checkFaststart(output);
     if (!status.ok) {
-      throw new Error(`${output}: still not faststart — ${describeFailure(status, fileSize)}`);
+      throw new Error(`${output}: still not faststart (${describeFailure(status, fileSize)})`);
     }
     logger.success(output);
   }
 
-  logger.info(`Done — ${files.length} video(s) made faststart in "${config.out}" (no re-encode).`);
+  logger.info(`Done: ${files.length} video(s) made faststart in "${config.out}" (no re-encode).`);
 };
 
 /** Attach the `faststart` subcommand to the `video` parent command. */

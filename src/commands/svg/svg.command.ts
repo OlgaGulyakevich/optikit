@@ -69,17 +69,17 @@ export const svgCommand: CliCommand = {
       // unless the engine stripped something, in which case restoring the
       // original would bring it back.
       const keptOriginal = result.preserveOutput ? false : await keepSmaller(input, output);
-      logger.success(keptOriginal ? `${output} (kept original — smaller)` : output);
+      logger.success(keptOriginal ? `${output} (kept original, it is smaller)` : output);
     }
 
     if (failed === 0) {
-      logger.info(`Done — ${files.length} SVG(s) optimized to "${config.out}".`);
+      logger.info(`Done: ${files.length} SVG(s) optimized to "${config.out}".`);
       return;
     }
 
-    logger.info(`Done — ${files.length - failed} of ${files.length} SVG(s) optimized to "${config.out}".`);
+    logger.info(`Done: ${files.length - failed} of ${files.length} SVG(s) optimized to "${config.out}".`);
     // A batch that skipped files is not a success: cli.ts turns this into
     // `✖ …` plus a non-zero exit code, so CI and shell scripts can see it.
-    throw new Error(`${failed} file(s) failed to parse — listed above.`);
+    throw new Error(`${failed} file(s) failed to parse, listed above.`);
   },
 };

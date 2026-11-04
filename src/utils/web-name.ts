@@ -100,5 +100,5 @@ export const assertNoWebNameCollisions = (files: readonly string[], base: string
   if (collisions.length === 0) return;
 
   const pairs = collisions.map(([a, b]) => `  ${a}  ↔  ${b}`).join('\n');
-  throw new Error(`--web-names would give these files the same name — rename one of each pair:\n${pairs}`);
+  throw new Error(`--web-names would give these files the same name. Rename one of each pair:\n${pairs}`);
 };

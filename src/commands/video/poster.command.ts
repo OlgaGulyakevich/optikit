@@ -86,7 +86,7 @@ const makePosters = async (input: string, base: string, config: PosterConfig): P
     const output = target('-poster.webp');
     const frame = await extractFrame(input, best.time);
     await saveWebp(frame, output, encode);
-    logger.success(`${output} (frame at ${formatTimecode(best.time)} — sharpest well-exposed one)`);
+    logger.success(`${output} (frame at ${formatTimecode(best.time)}, the sharpest well-exposed one)`);
     return placeholderEntry(frame, output, config);
   }
 
@@ -103,7 +103,7 @@ const makePosters = async (input: string, base: string, config: PosterConfig): P
 
   const sheet = target('-posters.jpg');
   await saveContactSheet(tiles, sheet, { columns: 3, tileWidth: 360 });
-  logger.info(`Contact sheet: ${sheet} — keep the candidate you like, or re-run with --at <time>.`);
+  logger.info(`Contact sheet: ${sheet}. Keep the candidate you like, or re-run with --at <time>.`);
   return {};
 };
 
@@ -143,7 +143,7 @@ export const runPoster = async (raw: unknown): Promise<void> => {
     logger.success(`${placeholderPath} (${entries} placeholder(s), ${(Buffer.byteLength(json) / 1000).toFixed(1)} kB in total)`);
   }
 
-  logger.info(`Done — poster(s) for ${files.length} video(s) in "${config.out}".`);
+  logger.info(`Done: poster(s) for ${files.length} video(s) in "${config.out}".`);
 };
 
 /** Attach the `poster` subcommand to the `video` parent command. */

@@ -30,7 +30,7 @@ export const runCompress = async (raw: unknown): Promise<void> => {
   // Quality mode (default): single-pass CRF.
   if (config.max === undefined) {
     await transcodeVideos(files, resolved, config.out, config.webNames);
-    logger.info(`Done — ${files.length} video(s) compressed to "${config.out}".`);
+    logger.info(`Done: ${files.length} video(s) compressed to "${config.out}".`);
     return;
   }
 
@@ -62,7 +62,7 @@ export const runCompress = async (raw: unknown): Promise<void> => {
     logger.success(output);
   }
 
-  logger.info(`Done — ${files.length} video(s) compressed to "${config.out}" (target ≤ ${config.max}).`);
+  logger.info(`Done: ${files.length} video(s) compressed to "${config.out}" (target ≤ ${config.max}).`);
 };
 
 /** Attach the `compress` subcommand to the `video` parent command. */

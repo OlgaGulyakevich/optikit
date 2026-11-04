@@ -48,6 +48,6 @@ export const ogCommand: CliCommand = {
       logger.success(job.output);
     }
 
-    logger.info(`Done — ${jobs.length} og-image(s) written to "${config.out}".`);
+    logger.info(`Done: ${jobs.length} og-image(s) written to "${config.out}".`);
   },
 };

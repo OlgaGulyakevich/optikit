@@ -84,7 +84,7 @@ export class SvgoTool implements Tool<SvgoJob> {
     return {
       outputs: [job.output],
       notes: removed
-        ? [`${job.input}: executable content removed — pass --keep-scripts to preserve it.`]
+        ? [`${job.input}: executable content removed. Pass --keep-scripts to preserve it.`]
         : undefined,
       // Without this, a keep-smaller fallback could copy the original back and
       // quietly return the script we just removed.

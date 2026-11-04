@@ -53,7 +53,7 @@ export const measureIcon = async (path: string): Promise<Measurement> => {
   const svg = await readFile(path, 'utf8');
   const viewBox = parseViewBox(svg);
   if (!viewBox) {
-    throw new Error(`${path}: no viewBox or width/height — nothing to centre in.`);
+    throw new Error(`${path}: no viewBox or width/height, nothing to centre in.`);
   }
 
   const padded = padViewBox(viewBox, MARGIN);
@@ -65,7 +65,7 @@ export const measureIcon = async (path: string): Promise<Measurement> => {
   const center = inkCenter(render.alpha, render.width, render.height);
   const pixels = inkBounds(render.alpha, render.width, render.height);
   if (!center || !pixels) {
-    throw new Error(`${path}: renders blank — nothing to measure.`);
+    throw new Error(`${path}: renders blank, nothing to measure.`);
   }
 
   const topLeft = toUnits({ x: pixels.minX, y: pixels.minY }, render, padded);

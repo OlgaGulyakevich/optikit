@@ -23,7 +23,7 @@ const unitMultiplier = (unit: string): number => {
 export const parseSize = (input: string): number => {
   const match = /^(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)?$/i.exec(input.trim());
   if (!match) {
-    throw new Error(`Invalid size: "${input}" — expected e.g. "200mb", "1.5gb", "500kb".`);
+    throw new Error(`Invalid size: "${input}". Expected e.g. "200mb", "1.5gb", "500kb".`);
   }
 
   const value = Number(match[1]);

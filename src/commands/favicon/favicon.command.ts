@@ -138,10 +138,10 @@ export const faviconCommand: CliCommand = {
     // 5. <head> snippet — printed and saved to a file (so it isn't lost).
     const snippet = headSnippet(isSvgSource);
     const snippetOutput = join(config.out, 'favicon-snippet.html');
-    await writeFile(snippetOutput, `<!-- optikit favicon — add to <head> -->\n${snippet}\n`);
+    await writeFile(snippetOutput, `<!-- optikit favicon: add to <head> -->\n${snippet}\n`);
     logger.success(snippetOutput);
 
-    logger.info(`\nDone — favicon set written to "${config.out}".\n\nAdd to your <head>:\n\n${snippet}\n`);
+    logger.info(`\nDone: favicon set written to "${config.out}".\n\nAdd to your <head>:\n\n${snippet}\n`);
     if (!isSvgSource) {
       logger.info('Tip: pass an SVG source to also get a scalable favicon.svg.\n');
     }

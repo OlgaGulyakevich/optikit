@@ -22,11 +22,11 @@ export const runCheck = async (raw: unknown): Promise<void> => {
   for (const file of files) {
     const { status, fileSize } = await checkFaststart(file);
     if (status.ok) {
-      logger.success(`${file} — faststart`);
+      logger.success(`${file}: faststart`);
       continue;
     }
     failed += 1;
-    logger.error(`${file} — ${describeFailure(status, fileSize)}`);
+    logger.error(`${file}: ${describeFailure(status, fileSize)}`);
   }
 
   if (failed === 0) {
@@ -34,7 +34,7 @@ export const runCheck = async (raw: unknown): Promise<void> => {
     return;
   }
   // cli.ts turns this into `✖ …` plus exit code 1.
-  throw new Error(`${failed} of ${files.length} video(s) are not faststart — fix: optikit video faststart <input>`);
+  throw new Error(`${failed} of ${files.length} video(s) are not faststart. Fix: optikit video faststart <input>`);
 };
 
 /** Attach the `check` subcommand to the `video` parent command. */

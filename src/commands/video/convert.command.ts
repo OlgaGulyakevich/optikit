@@ -18,7 +18,7 @@ export const runConvert = async (raw: unknown): Promise<void> => {
   }
 
   await transcodeVideos(files, resolved, config.out, config.webNames);
-  logger.info(`Done — ${files.length} video(s) written to "${config.out}".`);
+  logger.info(`Done: ${files.length} video(s) written to "${config.out}".`);
 };
 
 /** Attach the `convert` subcommand to the `video` parent command. */

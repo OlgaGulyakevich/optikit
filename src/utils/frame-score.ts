@@ -118,7 +118,7 @@ export const parseTimecode = (text: string): number => {
     // Only the leading part may exceed 59: `90` seconds is fine, `1:90` is a typo.
     parts.slice(1).every((part) => Number(part) < 60);
   if (!valid) {
-    throw new Error(`Invalid time "${text}" — use seconds (4.2) or mm:ss / hh:mm:ss (00:04.2).`);
+    throw new Error(`Invalid time "${text}". Use seconds (4.2) or mm:ss / hh:mm:ss (00:04.2).`);
   }
   return parts.reduce((total, part) => total * 60 + Number(part), 0);
 };

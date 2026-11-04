@@ -205,7 +205,7 @@ export const verifyFix = (
     ink.maxX > box.minX + box.width + tolerance ||
     ink.maxY > box.minY + box.height + tolerance
   ) {
-    return 'the drawing crosses the canvas edge — it would be cut off';
+    return 'the drawing crosses the canvas edge, so it would be cut off';
   }
 
   const { x, y } = after.offset.units;

@@ -58,9 +58,9 @@ export const imgCommand: CliCommand = {
         job.scale === undefined &&
         job.resize === undefined;
       const keptOriginal = isReEncode && (await keepSmaller(job.input, job.output));
-      logger.success(keptOriginal ? `${job.output} (kept original — smaller)` : job.output);
+      logger.success(keptOriginal ? `${job.output} (kept original, it is smaller)` : job.output);
     }
 
-    logger.info(`Done — ${jobs.length} file(s) written to "${config.out}".`);
+    logger.info(`Done: ${jobs.length} file(s) written to "${config.out}".`);
   },
 };

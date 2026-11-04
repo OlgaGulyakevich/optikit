@@ -30,7 +30,7 @@ const describePlan = (plan: FixPlan): string => {
   if (plan.kind === 'translate') return `shift ${asTranslate(plan.shift)}`;
   const { minX, minY, width, height } = plan.viewBox;
   return (
-    `shift ${asTranslate(plan.shift)} would cut the drawing off — grow the canvas to ` +
+    `shift ${asTranslate(plan.shift)} would cut the drawing off, so grow the canvas to ` +
     `viewBox="${minX} ${minY} ${width} ${height}" instead ` +
     `(renders ~${Math.round(plan.shrink * 100)}% smaller in the same box)`
   );
@@ -83,7 +83,7 @@ export const runAudit = async (raw: unknown): Promise<void> => {
         count.marked += 1;
         const how = before.mark === 0 ? 'left as drawn' : 'centred';
         logger.success(
-          `${file} — ${how} on purpose (${formatAmount(before.mark)}), ${worstPercent(offset).toFixed(1)}% off centre by design`,
+          `${file}: ${how} on purpose (${formatAmount(before.mark)}), ${worstPercent(offset).toFixed(1)}% off centre by design`,
         );
         continue;
       }
@@ -92,11 +92,11 @@ export const runAudit = async (raw: unknown): Promise<void> => {
       count[verdict] += 1;
 
       if (verdict === 'ok' && !shared) {
-        logger.success(`${file} — centred (${worstPercent(offset).toFixed(1)}%)`);
+        logger.success(`${file}: centred (${worstPercent(offset).toFixed(1)}%)`);
         continue;
       }
       if (verdict === 'check' && !shared) {
-        logger.warn(`${file} — ink off by ${describeOffset(offset)}; has strokes — check by eye`);
+        logger.warn(`${file}: ink off by ${describeOffset(offset)}; has strokes, check by eye`);
         continue;
       }
 
@@ -104,7 +104,7 @@ export const runAudit = async (raw: unknown): Promise<void> => {
       const tolerance = toleranceFor(before.viewBox);
       const plan = planFix(before.ink, before.viewBox, shift, tolerance);
       const source = shared ? ` (same as ${config.sameAs ?? ''})` : '';
-      logger.warn(`${file} — ink off by ${describeOffset(offset)} → ${describePlan(plan)}${source}`);
+      logger.warn(`${file}: ink off by ${describeOffset(offset)} → ${describePlan(plan)}${source}`);
       if (!config.fix) continue;
 
       const output = outputPath(
@@ -122,11 +122,11 @@ export const runAudit = async (raw: unknown): Promise<void> => {
       const after = await measureIcon(output);
       const expected = { x: offset.units.x + shift.x, y: offset.units.y + shift.y };
       const failure = verifyFix(expected, after, tolerance);
-      if (failure) throw new Error(`${output}: fix did not hold — ${failure}.`);
+      if (failure) throw new Error(`${output}: fix did not hold: ${failure}.`);
 
       count.fixed += 1;
       logger.success(
-        `${output} — fixed (${formatAmount(config.amount)}): ${worstPercent(offset).toFixed(1)}% → ` +
+        `${output}: fixed (${formatAmount(config.amount)}): ${worstPercent(offset).toFixed(1)}% → ` +
           `${worstPercent(after.offset).toFixed(1)}% off centre, nothing cut off`,
       );
     } catch (error) {
@@ -147,7 +147,7 @@ export const runAudit = async (raw: unknown): Promise<void> => {
   }
 
   if (count.failed > 0) {
-    throw new Error(`${count.failed} file(s) failed — listed above.`);
+    throw new Error(`${count.failed} file(s) failed, listed above.`);
   }
 };
 
@@ -157,29 +157,29 @@ How it works:
   The browser centres an icon's bounding box; the eye centres its ink. The audit
   renders each SVG, finds the centre of mass, and reports the gap in viewBox units
   and in % of the canvas. --fix moves the drawing (svgo bakes the translate into
-  the paths) — or, when that would push it past the canvas edge, grows the viewBox
+  the paths). When that would push it past the canvas edge, it grows the viewBox
   instead and says how much smaller the icon renders. Every fixed file is
   re-measured; a fix that cuts ink off or misses its target fails.
 
 Strength (--amount, default half):
   The centre of mass is the upper bound, not the target. A static icon in a small
-  badge is also judged by the gaps to the badge edges — at full it can look
+  badge is also judged by the gaps to the badge edges, and at full it can look
   over-shifted. Check the result by eye in the real badge.
-  • Rotating icons (accordion caret, expand arrow): use --amount full — rotation
+  • Rotating icons (accordion caret, expand arrow): use --amount full: rotation
     turns around the canvas centre, so a partial fix still swings in an arc.
 
 Before you --fix:
-  • Illustrations with decorative strokes (rays, sparks): report only — the strokes
+  • Illustrations with decorative strokes (rays, sparks): report only: the strokes
     count as mass and pull the result off.
-  • Sets already aligned by their authors (Lucide, Phosphor, SF Symbols): don't fix —
-    you would correct them twice.
+  • Sets already aligned by their authors (Lucide, Phosphor, SF Symbols): don't fix,
+    or you correct them twice.
   • State pairs (play/pause, sound on/off): fix both with --same-as <one of them>.
 
 Marked icons:
   --fix writes data-optical="half" (or full, 0.75…) on the root <svg>. A marked
   icon is reported as centred on purpose and never fixed twice. Hand-tuned an
   icon yourself? Add the mark, and the audit will leave it alone.
-  data-optical="none" (or "0") — left uncorrected on purpose: an icon beside
+  data-optical="none" (or "0"): left uncorrected on purpose: an icon beside
   text, where the eye measures the gap to the word, not the centre.
 
 Examples:
