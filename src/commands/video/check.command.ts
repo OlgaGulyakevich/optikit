@@ -6,16 +6,16 @@ import { MP4_FAMILY, checkFaststart, describeFailure } from './read-atoms.js';
 
 /**
  * Run `check`: verify every video is faststart. Writes nothing. Exits non-zero
- * when a file fails, so a build or CI step can refuse a clip that would show
- * a loading spinner on first play.
+ * when a file fails or nothing was found, so a build or CI step can refuse a clip
+ * that would show a loading spinner on first play.
  */
 export const runCheck = async (raw: unknown): Promise<void> => {
   const config = checkSchema.parse(raw); // runtime boundary: unknown → CheckConfig
 
   const files = (await collectInputs(config.input)).filter((file) => MP4_FAMILY.test(file));
+  // Not a warning: a typo in a build script must not switch this guard off.
   if (files.length === 0) {
-    logger.warn(`No mp4/m4v/mov files found for "${config.input}".`);
-    return;
+    throw new Error(`No mp4/m4v/mov files found for "${config.input}", so nothing was checked.`);
   }
 
   let failed = 0;
