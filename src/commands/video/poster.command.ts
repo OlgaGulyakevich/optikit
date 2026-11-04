@@ -31,7 +31,7 @@ const SAMPLES = 12;
 const SCORE_SIZE = 256;
 /** Lives next to the posters it describes. */
 const PLACEHOLDER_FILE = 'placeholders.json';
-/** Measured on real clips: about 1 kB at an eighth of the poster, still recognisable. */
+/** Measured on real clips: 1–3 kB at an eighth of the poster, still recognisable. */
 const PLACEHOLDER_QUALITY = 40;
 
 /** Sample the clip in one decode pass and measure each frame. */

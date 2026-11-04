@@ -22,7 +22,7 @@ const MIN_WIDTH = 16;
 
 /**
  * Default placeholder width: an eighth of the poster. At that size a person, a gesture
- * and a product are still recognisable, and it costs about 1 kB. A 16 px image under a
+ * and a product are still recognisable, and it costs 1–3 kB. A 16 px image under a
  * heavy blur only says "something brownish is loading".
  */
 export const placeholderWidthFor = (posterWidth: number): number =>

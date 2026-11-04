@@ -1,8 +1,6 @@
-# Architecture — optikit
+# optikit architecture
 
-A CLI utility for optimizing web assets (images, video, OG images, favicons, SVG)
-and optically centring icons, for front-end workflows. Built in TypeScript (`strict`), ESM-only, distributed as
-an npm package with an `optikit` bin command.
+A CLI utility for optimizing web assets (images, video, OG images, favicons, SVG) and optically centring icons, for front-end workflows. Built in TypeScript (`strict`), ESM-only, distributed as an npm package with an `optikit` bin command.
 
 ## Overview
 
@@ -12,18 +10,12 @@ The codebase is organized **by layer**, each with a single responsibility:
 cli → commands → tools → core / utils
 ```
 
-- **cli** — the entry point: parses arguments and registers commands.
-- **commands** — one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`, `icon`),
-  including presets and input validation.
-- **tools** — the engines that actually do the work (sharp, ffmpeg, svgo, png-to-ico),
-  hidden behind a single interface.
-- **core / utils** — shared contracts, services, and pure helper functions.
+- **cli**: the entry point: parses arguments and registers commands.
+- **commands**: one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`, `icon`), including presets and input validation.
+- **tools**: the engines that actually do the work (sharp, ffmpeg, svgo, png-to-ico), hidden behind a single interface.
+- **core / utils**: shared contracts, services, and pure helper functions.
 
-Extensibility is the design goal: **adding a new engine means adding one new
-strategy in `src/tools/`** — the core never changes. A command that reuses an
-existing engine is even cheaper: `trim`, for example, just adds a `SharpJob.trim`
-option plus a command folder; `icon audit` adds `SvgoJob.translate` and reuses
-sharp to rasterize.
+Extensibility is the design goal: **adding a new engine means adding one new strategy in `src/tools/`**, and the core never changes. A command that reuses an existing engine is even cheaper: `trim`, for example, just adds a `SharpJob.trim` option plus a command folder; `icon audit` adds `SvgoJob.opticalFix` and reuses sharp to rasterize.
 
 ## Folder structure
 
@@ -37,12 +29,12 @@ optikit/
 │   │   │   └── img.schema.ts       #   Zod schema for config + inferred type
 │   │   ├── og/
 │   │   ├── video/
-│   │   │   ├── video.command.ts    #   parent — registers convert, compress, faststart, check
+│   │   │   ├── video.command.ts    #   parent: registers convert, compress, faststart, check, poster
 │   │   │   ├── convert.command.ts
 │   │   │   ├── compress.command.ts
 │   │   │   ├── faststart.command.ts #  stream-copy remux, index to the front
 │   │   │   ├── check.command.ts    #   atom-order gate for CI (exit 1)
-│   │   │   ├── poster.command.ts   #   score frames → best / candidates + sheet / --at
+│   │   │   ├── poster.command.ts   #   score frames → best / candidates + sheet / --at; placeholders.json
 │   │   │   ├── read-atoms.ts       #   file → atom headers (IO adapter)
 │   │   │   ├── video.schema.ts     #   Zod (shared base + per-command)
 │   │   │   ├── video.presets.ts    #   mobile / desktop ceilings
@@ -52,7 +44,7 @@ optikit/
 │   │   ├── svg/
 │   │   ├── trim/                   #   trim transparent padding (reuses sharp)
 │   │   └── icon/
-│   │       ├── icon.command.ts     #   parent — registers audit
+│   │       ├── icon.command.ts     #   parent: registers audit
 │   │       ├── audit.command.ts    #   measure → verdict → (--fix) svgo translate → re-measure
 │   │       └── measure.ts          #   SVG file → render on a padded canvas → ink centre + bounds + mark
 │   ├── tools/                      # ── Strategy layer (engines)
@@ -64,9 +56,10 @@ optikit/
 │   │   ├── tool.ts                 #   contracts: Tool<Job>, ToolResult, Engine
 │   │   ├── tool.factory.ts         #   Factory: engine → Tool
 │   │   ├── command.ts              #   CliCommand contract
-│   │   ├── file.service.ts         #   path handling / cleanup
+│   │   ├── file.service.ts         #   input discovery (disk first, then glob), keep-smaller
 │   │   └── logger.ts               #   output + progress
 │   └── utils/                      # ── pure functions = unit-test target
+│       ├── avif-quality.ts         #   WebP quality → the AVIF quality that looks the same
 │       ├── calc-bitrate.ts         #   size + duration → bitrate
 │       ├── naming.ts               #   @1x / @2x suffixes, output paths
 │       ├── parse-size.ts           #   "200mb" → bytes
@@ -75,6 +68,8 @@ optikit/
 │       ├── frame-score.ts          #   brightness, Laplacian sharpness, picks, timecodes
 │       ├── web-name.ts             #   any language → safe web name, collisions
 │       ├── format-issues.ts        #   Zod issues → "--flag: message" lines
+│       ├── icon-background.ts      #   plate colour for an icon that must be opaque
+│       ├── placeholder.ts          #   placeholders.json: entry shape, keys, merge
 │       └── *.test.ts               #   tests co-located (Vitest)
 ├── package.json
 ├── tsconfig.json
@@ -85,22 +80,20 @@ optikit/
 
 | Pattern | Where | How |
 | --- | --- | --- |
-| **Strategy** | `src/tools/*` | `Tool<Job>` — sharp / ffmpeg / svgo / ico are interchangeable engines. A new tool is a new file. |
+| **Strategy** | `src/tools/*` | `Tool<Job>`: sharp / ffmpeg / svgo / ico are interchangeable engines. A new tool is a new file. |
 | **Factory** | `core/tool.factory.ts` | Maps `engine → Tool` via a registry. |
 | **Command** | `src/commands/*` | `CliCommand` + presets = a task with its settings. |
 | **Generics** | `Tool<Job>`, `z.infer<typeof schema>` | Type-safe config per tool, derived from the validation schema. |
 
 Most commands drive a single engine; `favicon` composes several through the same
-Factory — sharp renders the PNG sizes, png-to-ico packs the `.ico`, and (for an
-SVG source) svgo emits a scalable `favicon.svg`.
+Factory: sharp renders the PNG sizes, png-to-ico packs the `.ico`, and (for an SVG source) svgo emits a scalable `favicon.svg`.
 
 ## Key contracts
 
-Contracts are the skeleton of the app: commands and tools are built on top of
-ready-made types, not the other way around.
+Contracts are the skeleton of the app: commands and tools are built on top of ready-made types, not the other way around.
 
 ```ts
-// core/tool.ts — Strategy contract
+// core/tool.ts: Strategy contract
 export type Engine = 'sharp' | 'ffmpeg' | 'svgo' | 'ico';
 
 export interface ToolResult {
@@ -114,7 +107,7 @@ export interface Tool<Job> {
 ```
 
 ```ts
-// core/command.ts — Command layer (commander.Command ≠ our CliCommand)
+// core/command.ts: Command layer (commander.Command ≠ our CliCommand)
 import type { Command as Program } from 'commander';
 
 export interface CliCommand {
@@ -125,14 +118,18 @@ export interface CliCommand {
 ```
 
 ```ts
-// commands/img/img.schema.ts — config via Zod (type inferred with z.infer)
-export const imgSchema = z.object({
-  input: z.string().min(1),
-  out: z.string().default('optimized'),
-  quality: z.coerce.number().int().min(1).max(100).default(85),
-  avif: z.boolean().default(false),
-  retina: z.boolean().default(false),
-});
+// commands/img/img.schema.ts: config via Zod (type inferred with z.infer)
+export const imgSchema = z
+  .object({
+    input: z.string().min(1),
+    out: z.string().default('optimized'),
+    quality: z.coerce.number().int().min(1).max(100).default(85),
+    avif: z.boolean().default(false),
+    fast: z.boolean().default(false),
+    retina: z.boolean().default(false),
+    webNames: z.boolean().default(false),
+  })
+  .refine((config) => !config.fast || config.avif, { message: 'needs --avif', path: ['fast'] });
 export type ImgConfig = z.infer<typeof imgSchema>;
 ```
 
@@ -149,22 +146,15 @@ argv → commander → CliCommand.run(raw)
 
 ## spawn vs in-process
 
-`ffmpeg` is an external binary, driven via `spawn` and communication over
-stdout/stderr. `sharp`, `svgo`, and `png-to-ico` are npm libraries called as
-functions returning a `Promise`. The single `Tool<Job>.run()` interface **hides
-this difference inside each strategy**: `FfmpegTool` wraps `spawn` + `ffprobe`
-in a Promise, while `SharpTool` simply `await`s `sharp(...)`. The caller never
-needs to know how an engine runs — that is the point of the Strategy pattern.
+`ffmpeg` is an external binary, driven via `spawn` and communication over stdout/stderr. `sharp`, `svgo`, and `png-to-ico` are npm libraries called as functions returning a `Promise`. The single `Tool<Job>.run()` interface **hides this difference inside each strategy**: `FfmpegTool` wraps `spawn` + `ffprobe` in a Promise, while `SharpTool` simply `await`s `sharp(...)`. The caller never needs to know how an engine runs, which is the point of the Strategy pattern.
 
 ## Testing strategy
 
-Tests target the **pure logic** (no IO) — output naming & retina rules, common
-base directory, bitrate calculation, size parsing, preset resolution, MP4 atom
-walking, centre-of-mass maths, poster frame scoring, web names, and Zod schema
-validation.
+Tests target the **pure logic** (no IO): output naming & retina rules, common base directory, bitrate calculation, size parsing, preset resolution, MP4 atom walking, centre-of-mass maths, poster frame scoring, web names, the AVIF quality table, the icon plate rule, placeholder merging, and Zod schema validation.
 
-The atom walker takes a `read(offset, length)` callback instead of a path, so
-tests feed it an in-memory buffer; the command layer passes a real file handle.
-One test renders a triangle through sharp: librsvg is in-process and
-deterministic, and it is the only way to prove the SVG → pixels → offset chain. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are
-not unit-tested — that responsibility belongs to the upstream libraries.
+The atom walker takes a `read(offset, length)` callback instead of a path, so tests feed it an in-memory buffer; the command layer passes a real file handle.
+
+A few tests touch the disk or run sharp for real, because the result is the point:
+`collectInputs` against files named with parentheses and brackets, favicon corners, placeholders, and a triangle rendered through sharp, the only way to prove the SVG → pixels → offset chain. librsvg is in-process and deterministic. ffmpeg stays out, because CI doesn't have it. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are not unit-tested: that responsibility belongs to the upstream libraries.
+
+CI runs everything on Ubuntu, and the input-path tests on Windows as well, since backslash paths can only be proven there.

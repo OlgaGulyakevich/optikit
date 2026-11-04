@@ -165,11 +165,11 @@ Strength (--amount, default half):
   The centre of mass is the upper bound, not the target. A static icon in a small
   badge is also judged by the gaps to the badge edges, and at full it can look
   over-shifted. Check the result by eye in the real badge.
-  • Rotating icons (accordion caret, expand arrow): use --amount full: rotation
+  • Rotating icons (accordion caret, expand arrow): use --amount full. Rotation
     turns around the canvas centre, so a partial fix still swings in an arc.
 
 Before you --fix:
-  • Illustrations with decorative strokes (rays, sparks): report only: the strokes
+  • Illustrations with decorative strokes (rays, sparks): report only. The strokes
     count as mass and pull the result off.
   • Sets already aligned by their authors (Lucide, Phosphor, SF Symbols): don't fix,
     or you correct them twice.
