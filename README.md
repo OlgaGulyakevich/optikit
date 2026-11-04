@@ -310,7 +310,6 @@ Ideas for later (not yet implemented):
 
 - `gif2video`: convert GIFs to mp4 (much smaller files)
 - `blur`: inline placeholders for images, as `video poster --placeholder` does for clips
-- an AVIF that comes out heavier than its WebP: flag it, so the lighter file gets served
 - interactive mode: prompt for missing arguments (`@inquirer/prompts`)
 
 ## License
