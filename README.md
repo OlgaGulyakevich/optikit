@@ -15,6 +15,7 @@ One tool, one flow: point it at a file or folder, get web-ready output in a sepa
 optikit img ./assets --out ./public/img      # → WebP (+ @1x/@2x), structure mirrored
 optikit video compress hero.mp4 --max 3mb    # → web-sized mp4 under 3 MB
 optikit favicon logo.svg                     # → full favicon set + <link> snippet
+optikit placeholder ./public/posters         # → placeholders.json: tiny inline images + ratios
 optikit icon audit ./icons                   # → which icons look off-centre, and by how much
 ```
 
@@ -158,6 +159,7 @@ Without a poster the page shows an empty box until the first frame decodes; with
 - A later run for one new clip keeps the other entries, so the file can live in a repository.
 - A `placeholders.json` that optikit did not write stops the command and stays untouched.
 - Not available with `--candidates`: there is no final frame yet.
+- For images you already have, with no clip to take a frame from, use [`placeholder`](#placeholder-inline-placeholders-for-images-you-already-have).
 
 ### `svg`: optimize SVG with svgo
 
@@ -210,6 +212,21 @@ optikit trim logo.png --threshold 50
 
 - Trims transparent/empty padding from **PNG & WebP** (sharp `.trim()`), handy for Figma exports with extra whitespace around an icon.
 - Default threshold **120** (aggressive, clears alpha "ghosts"); tune with `--threshold <0–255>`. Flags: `--out`, `--threshold`.
+
+### `placeholder`: inline placeholders for images you already have
+
+```bash
+optikit placeholder ./public/posters --out ./src/data   # → src/data/placeholders.json
+optikit placeholder hero.webp --width 32
+```
+
+Writes the same `placeholders.json` as `video poster --placeholder`, from PNG, JPG, WebP or AVIF. The page shows the tiny image until the real one arrives, and the ratio holds the space. The markup above works the same with an `<img>` in place of the `<video>`.
+
+- Keys are paths relative to the input folder, with forward slashes: `hero.webp`, `works/clip.webp`. Run it on the files the page serves, so the keys match them.
+- Point it at one format. A folder with `hero@1x.webp`, `hero@2x.webp` and `hero.avif` gets three entries for one picture, so use a glob: `"./public/img/*@2x.webp"`.
+- The default width is an eighth of the image, counted from at most 1920 px. On 17 real video posters that was 1.1–3.2 kB each, 38 kB in total against 1 MB of posters. `--width <px>` (8–512) picks another size.
+- Everything inlined lands in the page's HTML, so on a long list check the total the command prints.
+- A later run keeps the other entries, and a `placeholders.json` that optikit did not write stops the command and stays untouched.
 
 ## Icon finishing
 
@@ -266,6 +283,7 @@ Height is derived from the source aspect ratio; never upscaled.
 
 - **Sources are never modified.** Output goes to `--out` (default `optimized/`), mirroring the input's structure, ready to drop into your project.
 - **keep-smaller:** for same-format re-encodes (SVG, `@2x` originals), if the optimized file isn't smaller than the source, the original is kept, so optimizing never makes a file worse.
+- **Phone photos stay upright.** The EXIF rotation tag is applied before encoding, because encoders drop it without turning the pixels.
 - **One bad file does not stop the batch.** It is named, the rest still run, and the command exits 1 at the end.
 - **Safe to re-run.** A directory run skips the `--out` folder when it sits inside the input, so a second `optikit img .` does not process the first run's files.
 
@@ -299,7 +317,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design: layers, ty
 
 - **TypeScript strict:** `strict` + `noUncheckedIndexedAccess`, ESM, no `any` in the codebase.
 - **Validated at the boundary:** every command's argv goes through a **Zod** schema before any work starts, so bad input fails fast with a readable message instead of deep inside sharp/ffmpeg.
-- **Tested where it matters:** Vitest on the logic: output naming (`@1x`/`@2x` rules), input paths (parentheses, brackets, Cyrillic, the output folder), 2-pass bitrate math, human size parsing (`3mb`), preset resolution, MP4 atom walking (incl. 64-bit sizes), centre-of-mass maths (a triangle balances at 1/3 of its height), poster frame scoring and timecodes, web names (incl. both encodings of one letter and name collisions), and the argv schemas. Sharp runs for real where pixels are the result: favicon corners, placeholders, optical centring. ffmpeg stays out of the tests, because CI doesn't have it.
+- **Tested where it matters:** Vitest on the logic: output naming (`@1x`/`@2x` rules), input paths (parentheses, brackets, Cyrillic, the output folder), EXIF rotation, 2-pass bitrate math, human size parsing (`3mb`), preset resolution, MP4 atom walking (incl. 64-bit sizes), centre-of-mass maths (a triangle balances at 1/3 of its height), poster frame scoring and timecodes, web names (incl. both encodings of one letter and name collisions), and the argv schemas. Sharp runs for real where pixels are the result: favicon corners, placeholders, phone photos, optical centring. ffmpeg stays out of the tests, because CI doesn't have it.
 - **CI on every push and PR:** `lint → test → build` on Node 22, plus the input-path tests on Windows (GitHub Actions).
 - **Publish gate:** `prepublishOnly` re-runs lint + tests + build, so a broken build can't reach npm.
 - **Safe by design:** sources are never modified; **keep-smaller** means an "optimized" file is discarded if it isn't actually smaller than the original.
@@ -309,7 +327,6 @@ See [docs/architecture.md](docs/architecture.md) for the full design: layers, ty
 Ideas for later (not yet implemented):
 
 - `gif2video`: convert GIFs to mp4 (much smaller files)
-- `blur`: inline placeholders for images, as `video poster --placeholder` does for clips
 - interactive mode: prompt for missing arguments (`@inquirer/prompts`)
 
 ## License

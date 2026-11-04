@@ -11,7 +11,7 @@ cli → commands → tools → core / utils
 ```
 
 - **cli**: the entry point: parses arguments and registers commands.
-- **commands**: one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`, `icon`), including presets and input validation.
+- **commands**: one task per command (`img`, `og`, `video`, `svg`, `favicon`, `trim`, `placeholder`, `icon`), including presets and input validation.
 - **tools**: the engines that actually do the work (sharp, ffmpeg, svgo, png-to-ico), hidden behind a single interface.
 - **core / utils**: shared contracts, services, and pure helper functions.
 
@@ -43,6 +43,7 @@ optikit/
 │   │   ├── favicon/
 │   │   ├── svg/
 │   │   ├── trim/                   #   trim transparent padding (reuses sharp)
+│   │   ├── placeholder/            #   images → placeholders.json; placeholder-file.ts is shared with video poster
 │   │   └── icon/
 │   │       ├── icon.command.ts     #   parent: registers audit
 │   │       ├── audit.command.ts    #   measure → verdict → (--fix) svgo translate → re-measure

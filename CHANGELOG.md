@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [0.9.0] - 2026-11-04
+
+### Added
+
+- `placeholder` writes `placeholders.json` from images you already have (PNG, JPG, WebP, AVIF): a tiny inline image to show until each one arrives, and the ratio that holds its space. Same file and format as `video poster --placeholder`, for when there is no clip to take a frame from.
+
+### Fixed
+
+- Phone photos came out on their side. Encoders drop the EXIF rotation tag without turning the pixels, so a portrait JPEG lost its direction in WebP, JPEG, PNG, `og` and `favicon`, while AVIF stayed upright: one `<picture>` showed the photo two ways depending on the browser. The tag is now applied before encoding, and `@1x` scales from the width a person sees.
+- `video poster --placeholder` no longer writes an empty `placeholders.json` when every clip failed.
+
 ## [0.8.0] - 2026-11-04
 
 ### Added

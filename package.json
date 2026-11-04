@@ -1,7 +1,7 @@
 {
   "name": "@gulyakevich/optikit",
   "version": "0.8.0",
-  "description": "CLI to optimize web assets: images (WebP, AVIF), video (faststart, posters, placeholders), og-image, favicon, svg, PNG trim, web-safe file names. Optically centres icons.",
+  "description": "CLI to optimize web assets: images (WebP, AVIF, inline placeholders), video (faststart, posters), og-image, favicon, svg, PNG trim, web-safe file names. Optically centres icons.",
   "type": "module",
   "bin": {
     "optikit": "dist/cli.js"
