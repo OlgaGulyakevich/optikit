@@ -71,6 +71,42 @@ describe('collectInputs', () => {
     ]);
   });
 
+  describe('with an output folder inside the input', () => {
+    beforeAll(async () => {
+      await mkdir(join(dir, 'site', 'optimized', 'nested'), { recursive: true });
+      await mkdir(join(dir, 'site', 'optimized-old'), { recursive: true });
+      await Promise.all([
+        writeFile(join(dir, 'site', 'photo.png'), ''),
+        writeFile(join(dir, 'site', 'optimized', 'photo@1x.png'), ''),
+        writeFile(join(dir, 'site', 'optimized', 'nested', 'deep.png'), ''),
+        writeFile(join(dir, 'site', 'optimized-old', 'keep.png'), ''),
+      ]);
+    });
+    const site = () => join(dir, 'site');
+
+    // Without this the second run reprocesses the first run's output into optimized/optimized/.
+    it('leaves earlier output out of a directory run', async () => {
+      expect(await collectInputs(site(), join(site(), 'optimized'))).toEqual([
+        `${forward(dir)}/site/optimized-old/keep.png`,
+        `${forward(dir)}/site/photo.png`,
+      ]);
+    });
+
+    it('still takes a file named directly, even from the output folder', async () => {
+      const file = join(site(), 'optimized', 'photo@1x.png');
+      expect(await collectInputs(file, join(site(), 'optimized'))).toEqual([forward(file)]);
+    });
+
+    it('keeps everything when the output folder is the input itself', async () => {
+      expect(await collectInputs(site(), site())).toHaveLength(4);
+    });
+
+    it('keeps everything when the output folder is outside the input', async () => {
+      expect(await collectInputs(join(site(), 'optimized'), site())).toHaveLength(2);
+      expect(await collectInputs(site(), join(dir, 'elsewhere'))).toHaveLength(4);
+    });
+  });
+
   it('drops a leading ./ the way the glob results always did', async () => {
     expect(await collectInputs(`.${sep}${join(dir, 'plain.mp4')}`)).toEqual([`${forward(dir)}/plain.mp4`]);
   });

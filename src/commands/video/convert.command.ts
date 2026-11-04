@@ -11,7 +11,7 @@ export const runConvert = async (raw: unknown): Promise<void> => {
   // convert = faithful transcode: keep resolution by default, high quality.
   const resolved = resolveVideoConfig(config, { crf: 23 });
 
-  const files = await collectVideos(config.input);
+  const files = await collectVideos(config.input, config.out);
   if (files.length === 0) {
     logger.warn(`No videos found for "${config.input}".`);
     return;

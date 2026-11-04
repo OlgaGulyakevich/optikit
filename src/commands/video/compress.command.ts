@@ -21,7 +21,7 @@ export const runCompress = async (raw: unknown): Promise<void> => {
   const config = compressSchema.parse(raw); // runtime boundary: unknown → CompressConfig
   const resolved = resolveVideoConfig(config, { crf: 28, maxWidth: WEB_MAX_WIDTH });
 
-  const files = await collectVideos(config.input);
+  const files = await collectVideos(config.input, config.out);
   if (files.length === 0) {
     logger.warn(`No videos found for "${config.input}".`);
     return;

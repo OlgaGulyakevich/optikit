@@ -17,7 +17,7 @@ import { MP4_FAMILY, checkFaststart, describeFailure } from './read-atoms.js';
 export const runFaststart = async (raw: unknown): Promise<void> => {
   const config = faststartSchema.parse(raw); // runtime boundary: unknown → FaststartConfig
 
-  const files = (await collectInputs(config.input)).filter((file) => MP4_FAMILY.test(file));
+  const files = (await collectInputs(config.input, config.out)).filter((file) => MP4_FAMILY.test(file));
   if (files.length === 0) {
     logger.warn(`No mp4/m4v/mov files found for "${config.input}".`);
     return;

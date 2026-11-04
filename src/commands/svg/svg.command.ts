@@ -29,7 +29,7 @@ export const svgCommand: CliCommand = {
   async run(raw: unknown): Promise<void> {
     const config = svgSchema.parse(raw); // runtime boundary: unknown → SvgConfig
 
-    const files = (await collectInputs(config.input)).filter((file) =>
+    const files = (await collectInputs(config.input, config.out)).filter((file) =>
       file.toLowerCase().endsWith('.svg'),
     );
     if (files.length === 0) {

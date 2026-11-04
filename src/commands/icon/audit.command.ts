@@ -51,7 +51,7 @@ const toleranceFor = (box: { width: number; height: number }) => Math.max(box.wi
 export const runAudit = async (raw: unknown): Promise<void> => {
   const config = auditSchema.parse(raw); // runtime boundary: unknown → AuditConfig
 
-  const files = (await collectInputs(config.input)).filter((file) =>
+  const files = (await collectInputs(config.input, config.out)).filter((file) =>
     file.toLowerCase().endsWith('.svg'),
   );
   if (files.length === 0) {

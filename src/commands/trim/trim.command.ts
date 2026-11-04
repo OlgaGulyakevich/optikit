@@ -33,7 +33,7 @@ export const trimCommand: CliCommand = {
   async run(raw: unknown): Promise<void> {
     const config = trimSchema.parse(raw); // runtime boundary: unknown → TrimConfig
 
-    const files = (await collectInputs(config.input)).filter((file) => TRIMMABLE.test(file));
+    const files = (await collectInputs(config.input, config.out)).filter((file) => TRIMMABLE.test(file));
     if (files.length === 0) {
       logger.warn(`No PNG/WebP files found for "${config.input}".`);
       return;

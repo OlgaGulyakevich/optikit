@@ -27,7 +27,7 @@ export const ogCommand: CliCommand = {
   async run(raw: unknown): Promise<void> {
     const config = ogSchema.parse(raw); // runtime boundary: unknown → OgConfig
 
-    const files = await collectInputs(config.input);
+    const files = await collectInputs(config.input, config.out);
     const base = commonBaseDir(files);
     if (config.webNames) assertNoWebNameCollisions(files, base);
     const jobs = buildOgJobs(files, {

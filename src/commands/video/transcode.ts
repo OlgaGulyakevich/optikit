@@ -11,8 +11,8 @@ import type { ResolvedVideo } from './resolve-preset.js';
 const VIDEO = /\.(mp4|mov|m4v|webm|mkv|avi)$/i;
 
 /** Glob `input` (file / dir / pattern) and keep only video files. */
-export const collectVideos = async (input: string): Promise<string[]> =>
-  (await collectInputs(input)).filter((file) => VIDEO.test(file));
+export const collectVideos = async (input: string, outDir?: string): Promise<string[]> =>
+  (await collectInputs(input, outDir)).filter((file) => VIDEO.test(file));
 
 /**
  * Transcode each file to web mp4 under `outDir`, mirroring the input structure.

@@ -30,7 +30,7 @@ export const imgCommand: CliCommand = {
   async run(raw: unknown): Promise<void> {
     const config = imgSchema.parse(raw); // runtime boundary: unknown → ImgConfig
 
-    const files = await collectInputs(config.input);
+    const files = await collectInputs(config.input, config.out);
     const base = commonBaseDir(files);
     if (config.webNames) assertNoWebNameCollisions(files, base);
     const jobs = buildImageJobs(files, {

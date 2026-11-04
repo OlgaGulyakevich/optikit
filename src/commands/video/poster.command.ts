@@ -119,7 +119,7 @@ const readPlaceholders = async (path: string): Promise<PlaceholderFile> =>
 export const runPoster = async (raw: unknown): Promise<void> => {
   const config = posterSchema.parse(raw); // runtime boundary: unknown → PosterConfig
 
-  const files = await collectVideos(config.input);
+  const files = await collectVideos(config.input, config.out);
   if (files.length === 0) {
     logger.warn(`No videos found for "${config.input}".`);
     return;

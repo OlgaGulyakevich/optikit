@@ -1,5 +1,5 @@
 import { copyFile, mkdir, stat, unlink } from 'node:fs/promises';
-import { isAbsolute, normalize, posix } from 'node:path';
+import { isAbsolute, normalize, posix, relative, sep } from 'node:path';
 import { glob } from 'tinyglobby';
 import { toPosixPath } from '../utils/naming.js';
 
@@ -30,6 +30,13 @@ export const ensureDir = async (dir: string): Promise<void> => {
   await mkdir(dir, { recursive: true });
 };
 
+/** `dir` relative to `base` when it sits strictly inside it, otherwise undefined. */
+const nestedPath = (base: string, dir: string): string | undefined => {
+  const path = relative(base, dir);
+  const outside = path === '' || path === '..' || path.startsWith(`..${sep}`) || isAbsolute(path);
+  return outside ? undefined : toPosixPath(path);
+};
+
 /**
  * Find files for `input`: a file, a directory (expanded recursively), or a glob
  * pattern. Sorted for deterministic, stable output.
@@ -40,15 +47,23 @@ export const ensureDir = async (dir: string): Promise<void> => {
  * Paths come back in the same form they went in: relative stays relative to
  * cwd, absolute stays absolute (instead of `../../../../private/tmp/…`). The
  * separator is always `/`, on Windows too, as the rest of the pipeline expects.
+ *
+ * A directory run skips `outDir` when it sits inside the input: the default output
+ * folder usually does, and a second run would otherwise process the first one's
+ * files into `optimized/optimized/`. A file named directly is always taken.
  */
-export const collectInputs = async (input: string): Promise<string[]> => {
+export const collectInputs = async (input: string, outDir?: string): Promise<string[]> => {
   const onDisk = await stat(input).catch(() => undefined);
   const path = toPosixPath(normalize(input));
 
   if (onDisk?.isFile()) return [path];
   if (onDisk?.isDirectory()) {
+    const output = outDir === undefined ? undefined : nestedPath(input, outDir);
     const files = await glob('**/*', { cwd: input });
-    return files.map((file) => posix.join(path, file)).sort();
+    return files
+      .filter((file) => output === undefined || !file.startsWith(`${output}/`))
+      .map((file) => posix.join(path, file))
+      .sort();
   }
 
   const files = await glob(toPosixPath(input), { expandDirectories: true, absolute: isAbsolute(input) });
