@@ -12,6 +12,7 @@ import { svgCommand } from './commands/svg/svg.command.js';
 import { faviconCommand } from './commands/favicon/favicon.command.js';
 import { trimCommand } from './commands/trim/trim.command.js';
 import { iconCommand } from './commands/icon/icon.command.js';
+import { placeholderCommand } from './commands/placeholder/placeholder.command.js';
 
 // Read our own version at runtime (single source of truth = package.json).
 // `import.meta.url` is the ESM way to locate files relative to this module
@@ -40,6 +41,7 @@ const commands: CliCommand[] = [
   svgCommand,
   faviconCommand,
   trimCommand,
+  placeholderCommand,
   iconCommand,
 ];
 for (const command of commands) {

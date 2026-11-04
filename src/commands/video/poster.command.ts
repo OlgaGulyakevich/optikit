@@ -129,7 +129,7 @@ export const runPoster = async (raw: unknown): Promise<void> => {
   });
 
   // Written before the failure is reported, so the clips that worked keep their entries.
-  if (config.placeholder) await writePlaceholders(config.out, placeholders);
+  if (config.placeholder && failed < files.length) await writePlaceholders(config.out, placeholders);
   assertNoFailures(failed, files.length);
 
   logger.info(`Done: poster(s) for ${files.length} video(s) in "${config.out}".`);
