@@ -1,8 +1,6 @@
 # Changelog
 
-All notable changes to this project are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (while on `0.x`, a change to existing behaviour bumps the minor).
+All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (while on `0.x`, a change to existing behaviour bumps the minor).
 
 ## [0.7.0] - 2026-11-04
 
@@ -32,8 +30,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (w
 
 ### Fixed
 
-- `icon audit` accepts `data-optical="none"` (or `"0"`) as a mark: left uncorrected on purpose. An icon beside text is aligned by the gap to the word, not by its centre; before, `"0"` was not recognised and the icon kept showing up as "to shift".
-  Marked icons now read `left as drawn on purpose (none)`, and every marked icon reports its offset as `… off centre by design`.
+- `icon audit` accepts `data-optical="none"` (or `"0"`) as a mark: left uncorrected on purpose. An icon beside text is aligned by the gap to the word, not by its centre; before, `"0"` was not recognised and the icon kept showing up as "to shift". Marked icons now read `left as drawn on purpose (none)`, and every marked icon reports its offset as `… off centre by design`.
 - A blank `data-optical=" "` no longer counts as a mark (`Number(' ')` is `0` in JavaScript, and a typo must not pass for a decision).
 
 ## [0.6.0] - 2026-10-05
@@ -55,10 +52,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (w
 
 ### Added
 
-- `video poster`: a still frame per clip for `<video poster>`, as WebP. By default the whole clip is sampled in one decode pass and the sharpest well-exposed frame wins (the first frame is usually a fade or a blur). `--candidates <n>` writes `n` frames from across the clip plus a contact sheet with timecodes to pick from;
-  `--at <time>` takes an exact moment.
-- `--web-names` on every command that writes files (not `favicon`): output names become lowercase latin with no spaces or URL-breaking characters, from any language: Cyrillic, German (`ä → ae`), Czech, Polish, Nordic. Folders too;
-  `@1x`/`@2x` kept. Both encodings of one letter give the same name. Two inputs that would collide stop the command before anything is written.
+- `video poster`: a still frame per clip for `<video poster>`, as WebP. By default the whole clip is sampled in one decode pass and the sharpest well-exposed frame wins (the first frame is usually a fade or a blur). `--candidates <n>` writes `n` frames from across the clip plus a contact sheet with timecodes to pick from; `--at <time>` takes an exact moment.
+- `--web-names` on every command that writes files (not `favicon`): output names become lowercase latin with no spaces or URL-breaking characters, from any language: Cyrillic, German (`ä → ae`), Czech, Polish, Nordic. Folders too; `@1x`/`@2x` kept. Both encodings of one letter give the same name. Two inputs that would collide stop the command before anything is written.
 
 ### Dependencies
 
@@ -69,23 +64,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (w
 ### Fixed
 
 - **Every mp4 from `video convert` and `video compress` is now faststart**: the index (`moov`) is written before the media data. Before, ffmpeg's default left it at the end, so a browser had to fetch the tail of the file before it could play, and each first play showed a loading spinner. With `--max`, the flag goes on the final pass.
-- Invalid flags are reported one line per flag, named as typed
-  (`✖ --quality: Too big: expected number to be <=100`), instead of a raw JSON dump.
+- Invalid flags are reported one line per flag, named as typed (`✖ --quality: Too big: expected number to be <=100`), instead of a raw JSON dump.
 - An absolute input path is printed as given. Before, it came out relative to the current directory, e.g. `../../../../private/tmp/…`.
 
 ### Added
 
 - `video faststart`: moves the index to the front with a stream copy: no re-encode, no quality loss, seconds per clip. Each output is verified after writing.
 - `video check`: reports whether each mp4/m4v/mov is faststart and exits non-zero if any is not, for CI and pre-build steps. Reads only atom headers; needs no ffmpeg.
-- `icon audit`: finds icons whose ink is off the canvas centre (the eye centres mass, the browser centres the bounding box) and reports the gap in viewBox units and %.
-  Report-only by default; `--fix` writes shifted copies with the translate baked into the paths by svgo and re-measures them. Options: `--amount full|half|<0–1>`, `--threshold <percent>`, `--same-as <file>` for state pairs.
+- `icon audit`: finds icons whose ink is off the canvas centre (the eye centres mass, the browser centres the bounding box) and reports the gap in viewBox units and %. Report-only by default; `--fix` writes shifted copies with the translate baked into the paths by svgo and re-measures them. Options: `--amount full|half|<0–1>`, `--threshold <percent>`, `--same-as <file>` for state pairs.
 
 ## [0.3.0] - 2026-09-21
 
 ### Security
 
-- **`optikit svg` now removes executable content by default**: `<script>` elements, `on*` event handlers and `javascript:` links. svgo does not do this on its own, so until now they passed straight through into files usually destined for a web page, where an inline `<script>` runs with the page's origin. Every affected file is named in the output; nothing is removed silently.
-  This is a safe default, **not a sanitizer**: for SVG from an untrusted source, sanitize properly (e.g. DOMPurify) before putting it on a page.
+- **`optikit svg` now removes executable content by default**: `<script>` elements, `on*` event handlers and `javascript:` links. svgo does not do this on its own, so until now they passed straight through into files usually destined for a web page, where an inline `<script>` runs with the page's origin. Every affected file is named in the output; nothing is removed silently. This is a safe default, **not a sanitizer**: for SVG from an untrusted source, sanitize properly (e.g. DOMPurify) before putting it on a page.
 
 ### Added
 

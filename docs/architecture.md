@@ -85,8 +85,7 @@ optikit/
 | **Command** | `src/commands/*` | `CliCommand` + presets = a task with its settings. |
 | **Generics** | `Tool<Job>`, `z.infer<typeof schema>` | Type-safe config per tool, derived from the validation schema. |
 
-Most commands drive a single engine; `favicon` composes several through the same
-Factory: sharp renders the PNG sizes, png-to-ico packs the `.ico`, and (for an SVG source) svgo emits a scalable `favicon.svg`.
+Most commands drive a single engine; `favicon` composes several through the same Factory: sharp renders the PNG sizes, png-to-ico packs the `.ico`, and (for an SVG source) svgo emits a scalable `favicon.svg`.
 
 ## Key contracts
 
@@ -154,7 +153,6 @@ Tests target the **pure logic** (no IO): output naming & retina rules, common ba
 
 The atom walker takes a `read(offset, length)` callback instead of a path, so tests feed it an in-memory buffer; the command layer passes a real file handle.
 
-A few tests touch the disk or run sharp for real, because the result is the point:
-`collectInputs` against files named with parentheses and brackets, favicon corners, placeholders, and a triangle rendered through sharp, the only way to prove the SVG → pixels → offset chain. librsvg is in-process and deterministic. ffmpeg stays out, because CI doesn't have it. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are not unit-tested: that responsibility belongs to the upstream libraries.
+A few tests touch the disk or run sharp for real, because the result is the point: `collectInputs` against files named with parentheses and brackets, favicon corners, placeholders, and a triangle rendered through sharp, the only way to prove the SVG → pixels → offset chain. librsvg is in-process and deterministic. ffmpeg stays out, because CI doesn't have it. The engines themselves (sharp, ffmpeg, svgo, png-to-ico) are not unit-tested: that responsibility belongs to the upstream libraries.
 
 CI runs everything on Ubuntu, and the input-path tests on Windows as well, since backslash paths can only be proven there.
