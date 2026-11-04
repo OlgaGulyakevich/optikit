@@ -16,3 +16,14 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+  # Backslash paths only exist on Windows, so they can only be proven there.
+  windows-paths:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run src/core/file.service.test.ts
