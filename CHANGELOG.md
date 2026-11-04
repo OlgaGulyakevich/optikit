@@ -20,6 +20,7 @@ All notable changes to this project are documented here. Format follows [Keep a 
 ### Fixed
 
 - Files and folders with parentheses in their names were not found: `"a (1).mp4"` was read as a glob group, and the command said "No files found". A path on disk now always wins over a pattern.
+- One broken file stopped `img`, `og`, `trim` and the `video` commands, so every file after it was lost, and `img` did not say which one it was. They now name the file, finish the rest and exit 1 at the end.
 - A second run over a folder processed the first run's output into `optimized/optimized/`. A directory run now skips `--out` when it sits inside the input.
 
 ### Security

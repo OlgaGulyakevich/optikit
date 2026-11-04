@@ -256,6 +256,7 @@ Height is derived from the source aspect ratio; never upscaled.
 
 - **Sources are never modified.** Output goes to `--out` (default `optimized/`), mirroring the input's structure, ready to drop into your project.
 - **keep-smaller:** for same-format re-encodes (SVG, `@2x` originals), if the optimized file isn't smaller than the source, the original is kept, so optimizing never makes a file worse.
+- **One bad file does not stop the batch.** It is named, the rest still run, and the command exits 1 at the end.
 - **Safe to re-run.** A directory run skips the `--out` folder when it sits inside the input, so a second `optikit img .` does not process the first run's files.
 
 ### `--web-names`: safe file names, any language

@@ -56,6 +56,7 @@ optikit/
 │   │   ├── tool.ts                 #   contracts: Tool<Job>, ToolResult, Engine
 │   │   ├── tool.factory.ts         #   Factory: engine → Tool
 │   │   ├── command.ts              #   CliCommand contract
+│   │   ├── batch.ts                #   one failed file is named, the rest still run, exit 1 at the end
 │   │   ├── file.service.ts         #   input discovery (disk first, then glob), keep-smaller
 │   │   └── logger.ts               #   output + progress
 │   └── utils/                      # ── pure functions = unit-test target
