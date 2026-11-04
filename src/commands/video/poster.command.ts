@@ -1,9 +1,10 @@
+import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, relative } from 'node:path';
 import type { Command as Program } from 'commander';
 import { extractFrame, probeDuration, sampleGrayFrames } from '../../tools/ffmpeg.tool.js';
-import { saveContactSheet, saveWebp } from '../../tools/sharp.tool.js';
+import { encodePlaceholder, saveContactSheet, saveWebp } from '../../tools/sharp.tool.js';
 import { logger } from '../../core/logger.js';
-import { ensureDir } from '../../core/file.service.js';
+import { ensureDir, fileExists } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
 import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import {
@@ -15,6 +16,12 @@ import {
   sampleWindow,
   type FrameStats,
 } from '../../utils/frame-score.js';
+import {
+  mergePlaceholders,
+  parsePlaceholderFile,
+  placeholderKey,
+  type PlaceholderFile,
+} from '../../utils/placeholder.js';
 import { posterSchema, type PosterConfig } from './video.schema.js';
 import { collectVideos } from './transcode.js';
 
@@ -22,6 +29,10 @@ import { collectVideos } from './transcode.js';
 const SAMPLES = 12;
 /** Side frames are scored at — enough to tell blur from detail, cheap to scan. */
 const SCORE_SIZE = 256;
+/** Lives next to the posters it describes. */
+const PLACEHOLDER_FILE = 'placeholders.json';
+/** Measured on real clips: about 1 kB at an eighth of the poster, still recognisable. */
+const PLACEHOLDER_QUALITY = 40;
 
 /** Sample the clip in one decode pass and measure each frame. */
 const scoreClip = async (input: string, duration: number, count: number): Promise<FrameStats[]> => {
@@ -33,8 +44,23 @@ const scoreClip = async (input: string, duration: number, count: number): Promis
   });
 };
 
-/** One file: a poster at `--at`, the best frame, or N candidates + a contact sheet. */
-const makePosters = async (input: string, base: string, config: PosterConfig): Promise<void> => {
+/** The entry for a saved poster, or nothing when `--placeholder` is off. */
+const placeholderEntry = async (image: Buffer, poster: string, config: PosterConfig): Promise<PlaceholderFile> => {
+  if (!config.placeholder) return {};
+  const { maxWidth, placeholderWidth: width } = config;
+  const entry = await encodePlaceholder(image, {
+    maxWidth,
+    quality: PLACEHOLDER_QUALITY,
+    ...(width === undefined ? {} : { width }),
+  });
+  return { [placeholderKey(config.out, poster)]: entry };
+};
+
+/**
+ * One file: a poster at `--at`, the best frame, or N candidates + a contact sheet.
+ * Returns the placeholder entries for what was saved.
+ */
+const makePosters = async (input: string, base: string, config: PosterConfig): Promise<PlaceholderFile> => {
   const stem = basename(input, extname(input));
   const dir = join(config.out, relative(base, dirname(input)));
   const target = (suffix: string) => outputPath(config.out, join(dir, `${stem}${suffix}`), config.webNames);
@@ -48,18 +74,20 @@ const makePosters = async (input: string, base: string, config: PosterConfig): P
       throw new Error(`${input}: --at ${formatTimecode(config.at)} is past the end (${formatTimecode(duration)}).`);
     }
     const output = target('-poster.webp');
-    await saveWebp(await extractFrame(input, config.at), output, encode);
+    const frame = await extractFrame(input, config.at);
+    await saveWebp(frame, output, encode);
     logger.success(`${output} (frame at ${formatTimecode(config.at)})`);
-    return;
+    return placeholderEntry(frame, output, config);
   }
 
   if (config.candidates === undefined) {
     const best = pickBest(await scoreClip(input, duration, SAMPLES));
     if (!best) throw new Error(`${input}: no frame could be read.`);
     const output = target('-poster.webp');
-    await saveWebp(await extractFrame(input, best.time), output, encode);
+    const frame = await extractFrame(input, best.time);
+    await saveWebp(frame, output, encode);
     logger.success(`${output} (frame at ${formatTimecode(best.time)} — sharpest well-exposed one)`);
-    return;
+    return placeholderEntry(frame, output, config);
   }
 
   const frames = await scoreClip(input, duration, Math.max(SAMPLES, config.candidates * 3));
@@ -76,7 +104,12 @@ const makePosters = async (input: string, base: string, config: PosterConfig): P
   const sheet = target('-posters.jpg');
   await saveContactSheet(tiles, sheet, { columns: 3, tileWidth: 360 });
   logger.info(`Contact sheet: ${sheet} — keep the candidate you like, or re-run with --at <time>.`);
+  return {};
 };
+
+/** What is already in the placeholder file, so a run for one new clip keeps the rest. */
+const readPlaceholders = async (path: string): Promise<PlaceholderFile> =>
+  (await fileExists(path)) ? parsePlaceholderFile(await readFile(path, 'utf8'), path) : {};
 
 /**
  * Run `poster`: a still frame per video for `<video poster>`. Without it the
@@ -95,8 +128,19 @@ export const runPoster = async (raw: unknown): Promise<void> => {
   const base = commonBaseDir(files);
   if (config.webNames) assertNoWebNameCollisions(files, base);
 
+  // Read before any encoding: a file that is not ours should stop the run, not end it.
+  const placeholderPath = join(config.out, PLACEHOLDER_FILE);
+  let placeholders = config.placeholder ? await readPlaceholders(placeholderPath) : {};
+
   for (const input of files) {
-    await makePosters(input, base, config);
+    placeholders = mergePlaceholders(placeholders, await makePosters(input, base, config));
+  }
+
+  if (config.placeholder) {
+    const json = `${JSON.stringify(placeholders, null, 2)}\n`;
+    await writeFile(placeholderPath, json);
+    const entries = Object.keys(placeholders).length;
+    logger.success(`${placeholderPath} (${entries} placeholder(s), ${(Buffer.byteLength(json) / 1000).toFixed(1)} kB in total)`);
   }
 
   logger.info(`Done — poster(s) for ${files.length} video(s) in "${config.out}".`);
@@ -111,6 +155,8 @@ export const registerPoster = (video: Program): void => {
     .option('--candidates <n>', 'save n good frames from across the clip + a contact sheet (2–12)')
     .option('--max-width <px>', 'cap poster width (default: 1920, matches compress)')
     .option('-q, --quality <n>', 'WebP quality 1–100 (default: 80)')
+    .option('--placeholder', `also write ${PLACEHOLDER_FILE}: an inline image and aspect ratio per poster`)
+    .option('--placeholder-width <px>', 'placeholder width 8–512 (default: an eighth of the poster)')
     .option('-o, --out <dir>', 'output directory (default: optimized)')
     .option(...WEB_NAMES_OPTION)
     .action(async (input: string, options: Record<string, unknown>) => {

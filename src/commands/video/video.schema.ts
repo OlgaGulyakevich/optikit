@@ -80,12 +80,24 @@ export const posterSchema = z
     maxWidth: z.coerce.number().int().positive().default(1920),
     /** WebP quality (1–100). */
     quality: z.coerce.number().int().min(1).max(100).default(80),
+    /** Also add an inline placeholder and aspect ratio for each poster to placeholders.json. */
+    placeholder: z.boolean().default(false),
+    /** Placeholder width in px. Omitted: an eighth of the poster. */
+    placeholderWidth: z.coerce.number().int().min(8).max(512).optional(),
     /** Rename outputs to safe web names (any language → latin, lowercase, no spaces). */
     webNames: z.boolean().default(false),
   })
   .refine((config) => config.at === undefined || config.candidates === undefined, {
     message: 'use either --at or --candidates, not both',
     path: ['at'],
+  })
+  .refine((config) => !config.placeholder || config.candidates === undefined, {
+    message: 'candidates are not a final frame yet: pick one with --at, then add --placeholder',
+    path: ['placeholder'],
+  })
+  .refine((config) => config.placeholderWidth === undefined || config.placeholder, {
+    message: 'needs --placeholder',
+    path: ['placeholderWidth'],
   });
 
 export type PosterConfig = z.infer<typeof posterSchema>;

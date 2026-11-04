@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import type { Tool, ToolResult } from '../core/tool.js';
+import { aspectRatioOf, placeholderWidthFor, type Placeholder } from '../utils/placeholder.js';
 
 /** Output formats the sharp engine can produce in optikit. */
 export type SharpFormat = 'webp' | 'avif' | 'png' | 'jpeg';
@@ -93,6 +94,25 @@ export const saveWebp = async (
   { maxWidth, quality }: { maxWidth: number; quality: number },
 ): Promise<void> => {
   await sharp(image).resize({ width: maxWidth, withoutEnlargement: true }).webp({ quality }).toFile(output);
+};
+
+/**
+ * Encode a frame as an inline WebP placeholder plus its aspect ratio. Without a chosen
+ * `width` it is an eighth of the poster, counted after the same `maxWidth` cap.
+ */
+export const encodePlaceholder = async (
+  image: Buffer,
+  { maxWidth, quality, width }: { maxWidth: number; quality: number; width?: number },
+): Promise<Placeholder> => {
+  const { width: frameWidth, height: frameHeight } = await sharp(image).metadata();
+  const small = await sharp(image)
+    .resize({ width: width ?? placeholderWidthFor(Math.min(frameWidth, maxWidth)), withoutEnlargement: true })
+    .webp({ quality, effort: 6 })
+    .toBuffer();
+  return {
+    placeholder: `data:image/webp;base64,${small.toString('base64')}`,
+    aspectRatio: aspectRatioOf(frameWidth, frameHeight),
+  };
 };
 
 /** Escape text for an SVG `<text>` node. */
