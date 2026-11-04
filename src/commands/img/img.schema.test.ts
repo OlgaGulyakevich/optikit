@@ -8,6 +8,7 @@ describe('imgSchema', () => {
       out: 'optimized',
       quality: 85,
       avif: false,
+      fast: false,
       retina: false,
       webNames: false, // off by default: existing output names must not change
     });
@@ -20,6 +21,11 @@ describe('imgSchema', () => {
   it('rejects quality out of range', () => {
     expect(() => imgSchema.parse({ input: 'a', quality: 0 })).toThrow();
     expect(() => imgSchema.parse({ input: 'a', quality: 101 })).toThrow();
+  });
+
+  it('accepts --fast with --avif and points at the flag without it', () => {
+    expect(imgSchema.parse({ input: 'a', avif: true, fast: true }).fast).toBe(true);
+    expect(imgSchema.safeParse({ input: 'a', fast: true }).error?.issues[0]?.path).toEqual(['fast']);
   });
 
   it('rejects missing input', () => {

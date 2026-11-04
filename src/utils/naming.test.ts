@@ -44,8 +44,15 @@ describe('buildImageJobs', () => {
   it('--avif adds an AVIF variant alongside each WebP', () => {
     expect(buildImageJobs(['assets/photo.jpg'], { ...opts, avif: true })).toEqual([
       { input: 'assets/photo.jpg', output: 'optimized/photo.webp', format: 'webp', quality: 80 },
-      { input: 'assets/photo.jpg', output: 'optimized/photo.avif', format: 'avif', quality: 80 },
+      { input: 'assets/photo.jpg', output: 'optimized/photo.avif', format: 'avif', quality: 50, effort: 6 },
     ]);
+  });
+
+  it('--fast lowers only the AVIF effort; the quality stays the same', () => {
+    const avif = buildImageJobs(['assets/photo.jpg'], { ...opts, avif: true, fast: true }).find(
+      (job) => job.format === 'avif',
+    );
+    expect(avif).toMatchObject({ quality: 50, effort: 4 });
   });
 
   it('--retina treats a plain image as @2x (full 4-variant pack)', () => {

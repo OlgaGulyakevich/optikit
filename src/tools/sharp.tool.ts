@@ -18,6 +18,8 @@ export interface SharpJob {
   format: SharpFormat;
   /** Encoding quality (1–100). Omit to keep the format with default (near-lossless) encoding. */
   quality?: number;
+  /** CPU effort for the encoder (AVIF: 0–9). Omit for sharp's default. */
+  effort?: number;
   /** Downscale factor, e.g. 0.5 for @2x → @1x. Omit (or 1) to keep original size. */
   scale?: number;
   /** Absolute target box, e.g. og 1200×630 with `fit: 'cover'`. */
@@ -54,11 +56,12 @@ export class SharpTool implements Tool<SharpJob> {
       pipeline.flatten({ background: job.background });
     }
 
-    const encoded =
-      job.quality === undefined
-        ? pipeline.toFormat(job.format)
-        : pipeline.toFormat(job.format, { quality: job.quality });
-    await encoded.toFile(job.output);
+    await pipeline
+      .toFormat(job.format, {
+        ...(job.quality === undefined ? {} : { quality: job.quality }),
+        ...(job.effort === undefined ? {} : { effort: job.effort }),
+      })
+      .toFile(job.output);
 
     return { outputs: [job.output] };
   }

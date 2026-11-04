@@ -17,8 +17,9 @@ export const imgCommand: CliCommand = {
       .command('img <input>')
       .description('Optimize raster images to WebP, applying @1x/@2x retina rules.')
       .option('-o, --out <dir>', 'output directory (default: optimized)')
-      .option('-q, --quality <n>', 'encoding quality 1–100 (default: 85)')
+      .option('-q, --quality <n>', 'encoding quality 1–100 (default: 85); AVIF uses the equivalent on its own scale')
       .option('--avif', 'also emit AVIF variants')
+      .option('--fast', 'AVIF: encode about twice as fast, photos 2–3% heavier')
       .option('--retina', 'treat plain images as @2x (emit @1x + @2x)')
       .option(...WEB_NAMES_OPTION)
       .action(async (input: string, options: Record<string, unknown>) => {
@@ -37,6 +38,7 @@ export const imgCommand: CliCommand = {
       outDir: config.out,
       quality: config.quality,
       avif: config.avif,
+      fast: config.fast,
       retina: config.retina,
     }).map((job) => ({ ...job, output: outputPath(config.out, job.output, config.webNames) }));
 

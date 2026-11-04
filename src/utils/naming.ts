@@ -1,5 +1,6 @@
 import { basename, dirname, extname, join, relative, sep } from 'node:path';
 import type { SharpFormat, SharpJob } from '../tools/sharp.tool.js';
+import { avifQualityFor } from './avif-quality.js';
 
 /** Where and how image jobs are produced. */
 export interface ImageNamingOptions {
@@ -11,11 +12,20 @@ export interface ImageNamingOptions {
   quality: number;
   /** Also emit AVIF variants alongside WebP. */
   avif?: boolean;
+  /** Encode AVIF at the quicker effort. */
+  fast?: boolean;
   /** Treat plain (suffix-less) inputs as @2x and emit the full retina pack. */
   retina?: boolean;
 }
 
 const RASTER = /\.(png|jpe?g)$/i;
+
+/**
+ * AVIF effort, 0–9. Measured on sample photos against sharp's default 4: 6 is 2–3%
+ * lighter for ~3x the time; 7 adds under 0.5% for ~4x, 9 about the same for ~8x.
+ */
+const AVIF_EFFORT = 6;
+const AVIF_EFFORT_FAST = 4;
 
 /** Forward slashes on every OS: glob patterns need them, and `commonBaseDir` splits on them. */
 export const toPosixPath = (path: string, separator: string = sep): string =>
@@ -37,7 +47,11 @@ const makeJob = (
   opts: ImageNamingOptions,
   scale?: number,
 ): SharpJob => {
-  const base = { input, output: outPath(input, fileName, opts), format, quality: opts.quality };
+  const encoding =
+    format === 'avif'
+      ? { quality: avifQualityFor(opts.quality), effort: opts.fast ? AVIF_EFFORT_FAST : AVIF_EFFORT }
+      : { quality: opts.quality };
+  const base = { input, output: outPath(input, fileName, opts), format, ...encoding };
   return scale === undefined ? base : { ...base, scale };
 };
 

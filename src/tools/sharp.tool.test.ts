@@ -1,6 +1,9 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { encodePlaceholder } from './sharp.tool.js';
+import { SharpTool, encodePlaceholder } from './sharp.tool.js';
 
 const frame = (width: number, height: number) =>
   sharp({ create: { width, height, channels: 3, background: '#c8ff00' } }).png().toBuffer();
@@ -34,5 +37,27 @@ describe('encodePlaceholder', () => {
   it('never enlarges a frame smaller than the requested width', async () => {
     const { placeholder } = await encodePlaceholder(await frame(40, 40), { ...options, width: 64 });
     expect((await decodedSize(placeholder)).width).toBe(40);
+  });
+});
+
+describe('SharpTool effort', () => {
+  it('reaches the AVIF encoder: another effort gives other bytes', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'optikit-sharp-'));
+    try {
+      // Noise, so the encoder has decisions to make.
+      const noise = Buffer.from(Array.from({ length: 64 * 64 * 3 }, (_, i) => (i * 7919) % 251));
+      const input = join(dir, 'noise.png');
+      await sharp(noise, { raw: { width: 64, height: 64, channels: 3 } }).png().toFile(input);
+
+      const encode = async (effort: number) => {
+        const output = join(dir, `e${effort}.avif`);
+        await new SharpTool().run({ input, output, format: 'avif', quality: 50, effort });
+        return readFile(output);
+      };
+
+      expect((await encode(0)).equals(await encode(9))).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
