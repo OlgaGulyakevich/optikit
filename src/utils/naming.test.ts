@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildImageJobs, buildOgJobs, commonBaseDir } from './naming.js';
+import { buildImageJobs, buildOgJobs, commonBaseDir, toPosixPath } from './naming.js';
 
 const opts = { inputBase: 'assets', outDir: 'optimized', quality: 80 };
 
@@ -58,6 +58,16 @@ describe('buildImageJobs', () => {
       'optimized/photo@1x.webp',
       'optimized/photo@2x.webp',
     ]);
+  });
+});
+
+describe('toPosixPath', () => {
+  it('turns Windows separators into forward slashes', () => {
+    expect(toPosixPath('C:\\Users\\Юля\\клипы (1)\\a.mp4', '\\')).toBe('C:/Users/Юля/клипы (1)/a.mp4');
+  });
+
+  it('leaves a backslash in a POSIX name alone: there it is a character, not a separator', () => {
+    expect(toPosixPath('odd\\name.mp4', '/')).toBe('odd\\name.mp4');
   });
 });
 

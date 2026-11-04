@@ -1,6 +1,7 @@
 import { copyFile, mkdir, stat, unlink } from 'node:fs/promises';
-import { isAbsolute } from 'node:path';
+import { isAbsolute, normalize, posix } from 'node:path';
 import { glob } from 'tinyglobby';
+import { toPosixPath } from '../utils/naming.js';
 
 /**
  * Filesystem helpers shared across tools. Path/name building lives in
@@ -30,14 +31,27 @@ export const ensureDir = async (dir: string): Promise<void> => {
 };
 
 /**
- * Find files matching `input` — a directory (expanded recursively), a glob
- * pattern, or a single file. Sorted for deterministic, stable output.
+ * Find files for `input`: a file, a directory (expanded recursively), or a glob
+ * pattern. Sorted for deterministic, stable output.
+ *
+ * The disk is asked first, because a real name can look like a pattern: `(1)` in
+ * `a (1).mp4` is a glob group, so as a pattern it only matches `a 1.mp4`.
  *
  * Paths come back in the same form they went in: relative stays relative to
- * cwd, absolute stays absolute (instead of `../../../../private/tmp/…`).
+ * cwd, absolute stays absolute (instead of `../../../../private/tmp/…`). The
+ * separator is always `/`, on Windows too, as the rest of the pipeline expects.
  */
 export const collectInputs = async (input: string): Promise<string[]> => {
-  const files = await glob(input, { expandDirectories: true, absolute: isAbsolute(input) });
+  const onDisk = await stat(input).catch(() => undefined);
+  const path = toPosixPath(normalize(input));
+
+  if (onDisk?.isFile()) return [path];
+  if (onDisk?.isDirectory()) {
+    const files = await glob('**/*', { cwd: input });
+    return files.map((file) => posix.join(path, file)).sort();
+  }
+
+  const files = await glob(toPosixPath(input), { expandDirectories: true, absolute: isAbsolute(input) });
   return files.sort();
 };
 

@@ -1,4 +1,4 @@
-import { basename, dirname, extname, join, relative } from 'node:path';
+import { basename, dirname, extname, join, relative, sep } from 'node:path';
 import type { SharpFormat, SharpJob } from '../tools/sharp.tool.js';
 
 /** Where and how image jobs are produced. */
@@ -16,6 +16,10 @@ export interface ImageNamingOptions {
 }
 
 const RASTER = /\.(png|jpe?g)$/i;
+
+/** Forward slashes on every OS: glob patterns need them, and `commonBaseDir` splits on them. */
+export const toPosixPath = (path: string, separator: string = sep): string =>
+  separator === '/' ? path : path.split(separator).join('/');
 
 /** Sharp format that preserves the source raster format (png stays png, jpg → jpeg). */
 const originalFormat = (ext: string): SharpFormat =>
