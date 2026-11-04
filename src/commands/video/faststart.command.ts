@@ -2,6 +2,7 @@ import { basename, dirname, join, relative } from 'node:path';
 import type { Command as Program } from 'commander';
 import type { FfmpegJob } from '../../tools/ffmpeg.tool.js';
 import { createTool } from '../../core/tool.factory.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
@@ -27,7 +28,7 @@ export const runFaststart = async (raw: unknown): Promise<void> => {
   if (config.webNames) assertNoWebNameCollisions(files, base);
   const tool = createTool('ffmpeg');
 
-  for (const input of files) {
+  const failed = await runBatch(files, (input) => input, async (input) => {
     // Same container in and out: a stream copy can't hit a codec the target rejects.
     const output = outputPath(
       config.out,
@@ -44,7 +45,8 @@ export const runFaststart = async (raw: unknown): Promise<void> => {
       throw new Error(`${output}: still not faststart (${describeFailure(status, fileSize)})`);
     }
     logger.success(output);
-  }
+  });
+  assertNoFailures(failed, files.length);
 
   logger.info(`Done: ${files.length} video(s) made faststart in "${config.out}" (no re-encode).`);
 };

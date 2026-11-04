@@ -3,6 +3,7 @@ import type { Command as Program } from 'commander';
 import type { CliCommand } from '../../core/command.js';
 import type { SharpFormat, SharpJob } from '../../tools/sharp.tool.js';
 import { createTool } from '../../core/tool.factory.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
@@ -43,7 +44,7 @@ export const trimCommand: CliCommand = {
     if (config.webNames) assertNoWebNameCollisions(files, base);
     const tool = createTool('sharp');
 
-    for (const input of files) {
+    const failed = await runBatch(files, (input) => input, async (input) => {
       const ext = extname(input);
       const output = outputPath(
         config.out,
@@ -62,7 +63,8 @@ export const trimCommand: CliCommand = {
       await ensureDir(dirname(output));
       await tool.run(job);
       logger.success(output);
-    }
+    });
+    assertNoFailures(failed, files.length);
 
     logger.info(`Done: ${files.length} image(s) trimmed to "${config.out}".`);
   },

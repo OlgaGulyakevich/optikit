@@ -3,6 +3,7 @@ import { basename, dirname, extname, join, relative } from 'node:path';
 import type { Command as Program } from 'commander';
 import { extractFrame, probeDuration, sampleGrayFrames } from '../../tools/ffmpeg.tool.js';
 import { encodePlaceholder, saveContactSheet, saveWebp } from '../../tools/sharp.tool.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
 import { ensureDir, fileExists } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
@@ -132,16 +133,18 @@ export const runPoster = async (raw: unknown): Promise<void> => {
   const placeholderPath = join(config.out, PLACEHOLDER_FILE);
   let placeholders = config.placeholder ? await readPlaceholders(placeholderPath) : {};
 
-  for (const input of files) {
+  const failed = await runBatch(files, (input) => input, async (input) => {
     placeholders = mergePlaceholders(placeholders, await makePosters(input, base, config));
-  }
+  });
 
+  // Written before the failure is reported, so the clips that worked keep their entries.
   if (config.placeholder) {
     const json = `${JSON.stringify(placeholders, null, 2)}\n`;
     await writeFile(placeholderPath, json);
     const entries = Object.keys(placeholders).length;
     logger.success(`${placeholderPath} (${entries} placeholder(s), ${(Buffer.byteLength(json) / 1000).toFixed(1)} kB in total)`);
   }
+  assertNoFailures(failed, files.length);
 
   logger.info(`Done: poster(s) for ${files.length} video(s) in "${config.out}".`);
 };

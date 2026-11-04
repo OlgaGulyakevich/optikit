@@ -2,6 +2,7 @@ import { dirname } from 'node:path';
 import type { Command as Program } from 'commander';
 import type { CliCommand } from '../../core/command.js';
 import { createTool } from '../../core/tool.factory.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { buildOgJobs, commonBaseDir } from '../../utils/naming.js';
@@ -42,11 +43,12 @@ export const ogCommand: CliCommand = {
     }
 
     const tool = createTool('sharp');
-    for (const job of jobs) {
+    const failed = await runBatch(jobs, (job) => job.input, async (job) => {
       await ensureDir(dirname(job.output));
       await tool.run(job);
       logger.success(job.output);
-    }
+    });
+    assertNoFailures(failed, jobs.length);
 
     logger.info(`Done: ${jobs.length} og-image(s) written to "${config.out}".`);
   },

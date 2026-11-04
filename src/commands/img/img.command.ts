@@ -2,6 +2,7 @@ import { dirname, extname } from 'node:path';
 import type { Command as Program } from 'commander';
 import type { CliCommand } from '../../core/command.js';
 import { createTool } from '../../core/tool.factory.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir, keepSmaller } from '../../core/file.service.js';
 import { buildImageJobs, commonBaseDir } from '../../utils/naming.js';
@@ -48,18 +49,23 @@ export const imgCommand: CliCommand = {
     }
 
     const tool = createTool('sharp');
-    for (const job of jobs) {
-      await ensureDir(dirname(job.output));
-      await tool.run(job);
+    // By source, not by job: a broken image should be reported once, not once per variant.
+    const sources = [...new Set(jobs.map((job) => job.input))];
+    const failed = await runBatch(sources, (source) => source, async (source) => {
+      for (const job of jobs.filter(({ input }) => input === source)) {
+        await ensureDir(dirname(job.output));
+        await tool.run(job);
 
-      // keep-smaller only for same-format, same-size re-encodes (e.g. @2x png→png).
-      const isReEncode =
-        extname(job.output).toLowerCase() === extname(job.input).toLowerCase() &&
-        job.scale === undefined &&
-        job.resize === undefined;
-      const keptOriginal = isReEncode && (await keepSmaller(job.input, job.output));
-      logger.success(keptOriginal ? `${job.output} (kept original, it is smaller)` : job.output);
-    }
+        // keep-smaller only for same-format, same-size re-encodes (e.g. @2x png→png).
+        const isReEncode =
+          extname(job.output).toLowerCase() === extname(job.input).toLowerCase() &&
+          job.scale === undefined &&
+          job.resize === undefined;
+        const keptOriginal = isReEncode && (await keepSmaller(job.input, job.output));
+        logger.success(keptOriginal ? `${job.output} (kept original, it is smaller)` : job.output);
+      }
+    });
+    assertNoFailures(failed, sources.length);
 
     logger.info(`Done: ${jobs.length} file(s) written to "${config.out}".`);
   },

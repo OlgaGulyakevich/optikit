@@ -1,6 +1,7 @@
 import { basename, dirname, extname, join, relative } from 'node:path';
 import type { FfmpegJob } from '../../tools/ffmpeg.tool.js';
 import { createTool } from '../../core/tool.factory.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
 import { collectInputs, ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
@@ -28,7 +29,7 @@ export const transcodeVideos = async (
   if (webNames) assertNoWebNameCollisions(files, base);
   const tool = createTool('ffmpeg');
 
-  for (const input of files) {
+  const failed = await runBatch(files, (input) => input, async (input) => {
     const output = outputPath(
       outDir,
       join(outDir, relative(base, dirname(input)), `${basename(input, extname(input))}.mp4`),
@@ -45,5 +46,6 @@ export const transcodeVideos = async (
     await ensureDir(dirname(output));
     await tool.run(job);
     logger.success(output);
-  }
+  });
+  assertNoFailures(failed, files.length);
 };

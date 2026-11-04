@@ -2,6 +2,7 @@ import { basename, dirname, extname, join, relative } from 'node:path';
 import type { Command as Program } from 'commander';
 import type { FfmpegJob } from '../../tools/ffmpeg.tool.js';
 import { probeDuration } from '../../tools/ffmpeg.tool.js';
+import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { createTool } from '../../core/tool.factory.js';
 import { logger } from '../../core/logger.js';
 import { ensureDir } from '../../core/file.service.js';
@@ -41,7 +42,7 @@ export const runCompress = async (raw: unknown): Promise<void> => {
   if (config.webNames) assertNoWebNameCollisions(files, base);
   const tool = createTool('ffmpeg');
 
-  for (const input of files) {
+  const failed = await runBatch(files, (input) => input, async (input) => {
     const durationSeconds = await probeDuration(input);
     const videoBitrate = calcVideoBitrate({ targetBytes, durationSeconds, audioBitrate });
     const output = outputPath(
@@ -60,7 +61,8 @@ export const runCompress = async (raw: unknown): Promise<void> => {
     await ensureDir(dirname(output));
     await tool.run(job);
     logger.success(output);
-  }
+  });
+  assertNoFailures(failed, files.length);
 
   logger.info(`Done: ${files.length} video(s) compressed to "${config.out}" (target ≤ ${config.max}).`);
 };
