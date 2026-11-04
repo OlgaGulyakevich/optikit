@@ -1,11 +1,10 @@
-import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, relative } from 'node:path';
 import type { Command as Program } from 'commander';
 import { extractFrame, probeDuration, sampleGrayFrames } from '../../tools/ffmpeg.tool.js';
 import { encodePlaceholder, saveContactSheet, saveWebp } from '../../tools/sharp.tool.js';
 import { assertNoFailures, runBatch } from '../../core/batch.js';
 import { logger } from '../../core/logger.js';
-import { ensureDir, fileExists } from '../../core/file.service.js';
+import { ensureDir } from '../../core/file.service.js';
 import { commonBaseDir } from '../../utils/naming.js';
 import { WEB_NAMES_OPTION, assertNoWebNameCollisions, outputPath } from '../../utils/web-name.js';
 import {
@@ -18,11 +17,12 @@ import {
   type FrameStats,
 } from '../../utils/frame-score.js';
 import {
+  PLACEHOLDER_QUALITY,
   mergePlaceholders,
-  parsePlaceholderFile,
   placeholderKey,
   type PlaceholderFile,
 } from '../../utils/placeholder.js';
+import { PLACEHOLDER_FILE, placeholderPath, readPlaceholders, writePlaceholders } from '../placeholder/placeholder-file.js';
 import { posterSchema, type PosterConfig } from './video.schema.js';
 import { collectVideos } from './transcode.js';
 
@@ -30,10 +30,6 @@ import { collectVideos } from './transcode.js';
 const SAMPLES = 12;
 /** Side frames are scored at — enough to tell blur from detail, cheap to scan. */
 const SCORE_SIZE = 256;
-/** Lives next to the posters it describes. */
-const PLACEHOLDER_FILE = 'placeholders.json';
-/** Measured on real clips: 1–3 kB at an eighth of the poster, still recognisable. */
-const PLACEHOLDER_QUALITY = 40;
 
 /** Sample the clip in one decode pass and measure each frame. */
 const scoreClip = async (input: string, duration: number, count: number): Promise<FrameStats[]> => {
@@ -108,10 +104,6 @@ const makePosters = async (input: string, base: string, config: PosterConfig): P
   return {};
 };
 
-/** What is already in the placeholder file, so a run for one new clip keeps the rest. */
-const readPlaceholders = async (path: string): Promise<PlaceholderFile> =>
-  (await fileExists(path)) ? parsePlaceholderFile(await readFile(path, 'utf8'), path) : {};
-
 /**
  * Run `poster`: a still frame per video for `<video poster>`. Without it the
  * page shows an empty box until the first frame decodes; with a poster of the
@@ -130,20 +122,14 @@ export const runPoster = async (raw: unknown): Promise<void> => {
   if (config.webNames) assertNoWebNameCollisions(files, base);
 
   // Read before any encoding: a file that is not ours should stop the run, not end it.
-  const placeholderPath = join(config.out, PLACEHOLDER_FILE);
-  let placeholders = config.placeholder ? await readPlaceholders(placeholderPath) : {};
+  let placeholders = config.placeholder ? await readPlaceholders(placeholderPath(config.out)) : {};
 
   const failed = await runBatch(files, (input) => input, async (input) => {
     placeholders = mergePlaceholders(placeholders, await makePosters(input, base, config));
   });
 
   // Written before the failure is reported, so the clips that worked keep their entries.
-  if (config.placeholder) {
-    const json = `${JSON.stringify(placeholders, null, 2)}\n`;
-    await writeFile(placeholderPath, json);
-    const entries = Object.keys(placeholders).length;
-    logger.success(`${placeholderPath} (${entries} placeholder(s), ${(Buffer.byteLength(json) / 1000).toFixed(1)} kB in total)`);
-  }
+  if (config.placeholder) await writePlaceholders(config.out, placeholders);
   assertNoFailures(failed, files.length);
 
   logger.info(`Done: poster(s) for ${files.length} video(s) in "${config.out}".`);

@@ -17,6 +17,9 @@ const placeholderFileSchema = z.record(z.string(), placeholderSchema);
 
 export type PlaceholderFile = z.infer<typeof placeholderFileSchema>;
 
+/** Measured on real clips: 1–3 kB at an eighth of the source, still recognisable. */
+export const PLACEHOLDER_QUALITY = 40;
+
 /** Narrowest placeholder worth encoding. */
 const MIN_WIDTH = 16;
 
@@ -32,9 +35,8 @@ export const placeholderWidthFor = (posterWidth: number): number =>
 export const aspectRatioOf = (width: number, height: number): number =>
   Math.round((width / height) * 10_000) / 10_000;
 
-/** The key a page looks a poster up by: relative to the output folder, forward slashes. */
-export const placeholderKey = (outDir: string, posterPath: string): string =>
-  toPosixPath(relative(outDir, posterPath));
+/** The key a page looks an image up by: relative to `base`, forward slashes. */
+export const placeholderKey = (base: string, path: string): string => toPosixPath(relative(base, path));
 
 /** Entries from earlier runs plus this run's, sorted so a re-run gives a clean diff. */
 export const mergePlaceholders = (existing: PlaceholderFile, added: PlaceholderFile): PlaceholderFile =>
