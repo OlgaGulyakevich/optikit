@@ -7,10 +7,12 @@
 [![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue)](#license)
 
+<p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/cover-dark.svg">
   <img src="docs/cover-light.svg" width="640" alt="optikit: .jpg, .png, .mov and .svg go in, .avif, .webp, .mp4 and .svg come out">
 </picture>
+</p>
 
 A type-safe **CLI for optimizing web assets**: images, video, OG images, SVG, favicons and transparent-padding trim, plus **optical centring for icons**. Built in TypeScript (strict, ESM).
 
