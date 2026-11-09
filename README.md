@@ -14,7 +14,7 @@
 </picture>
 </p>
 
-A type-safe **CLI for optimizing web assets**: images, video, OG images, SVG, favicons and transparent-padding trim, plus **optical centring for icons**. Built in TypeScript (strict, ESM).
+**The media side of frontend work in one CLI**: web-ready images and video, video posters, loading placeholders, OG images, favicons, and icons centred by their visual weight. Built in TypeScript (strict, ESM).
 
 One tool, one flow: point it at a file or folder, get web-ready output in a separate directory. Source files are never modified.
 
