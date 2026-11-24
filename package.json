@@ -1,7 +1,7 @@
 {
   "name": "@gulyakevich/optikit",
   "version": "0.9.0",
-  "description": "The media side of frontend work in one CLI: web-ready images (WebP, AVIF) and video (faststart), posters, inline placeholders, OG images, favicons, SVG, and icons centred by their visual weight.",
+  "description": "Frontend CLI that turns the files clients send into files a site can ship: images, video, posters, favicons, SVG, icons. Runs in your terminal, in CI or through a coding agent. Adds no code to your bundle.",
   "type": "module",
   "bin": {
     "optikit": "dist/cli.js"

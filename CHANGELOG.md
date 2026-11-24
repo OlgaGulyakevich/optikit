@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (while on `0.x`, a change to existing behaviour bumps the minor).
 
+## [Unreleased]
+
+### Changed
+
+- The README, `--help` and the npm description say what the tool is for, in the same words.
+
 ## [0.9.0] - 2026-11-04
 
 ### Added

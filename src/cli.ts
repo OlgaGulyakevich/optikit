@@ -30,7 +30,9 @@ const program = new Command();
 
 program
   .name('optikit')
-  .description('Optimize web assets (images, video, og-image, favicon, svg) and finish icons.')
+  .description(
+    "Turn the files clients send into files a site can ship, and fix the defects you'd otherwise find in production.",
+  )
   .version(version, '-v, --version', 'output the current version');
 
 // Command registry — add a command here and it is wired up uniformly.

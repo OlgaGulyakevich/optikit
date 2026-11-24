@@ -14,7 +14,9 @@
 </picture>
 </p>
 
-**The media side of frontend work in one CLI**: web-ready images and video, video posters, loading placeholders, OG images, favicons, and icons centred by their visual weight. Built in TypeScript (strict, ESM).
+**Turns the files clients send into files a site can ship, and fixes the defects you'd otherwise find in production.** A command-line tool for frontend developers: images, video, video posters, loading placeholders, OG images, favicons, SVG, and icons centred by their visual weight. It runs in your terminal, in CI or through a coding agent, and adds no code to your bundle.
+
+Built to automate what I kept doing by hand on my own projects.
 
 One tool, one flow: point it at a file or folder, get web-ready output in a separate directory. Source files are never modified.
 
