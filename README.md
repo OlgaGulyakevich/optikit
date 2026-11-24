@@ -344,11 +344,8 @@ MIT
 
 ## Author
 
-<a href="https://github.com/OlgaGulyakevich"><img src="https://wsrv.nl/?url=github.com/OlgaGulyakevich.png&w=96&h=96&mask=circle" width="48" height="48" alt="Olga Gulyakevich" align="left"></a>
+<a href="https://github.com/OlgaGulyakevich"><img src="https://wsrv.nl/?url=github.com/OlgaGulyakevich.png&w=96&h=96&mask=circle" width="48" alt="Olga Gulyakevich" align="left"></a>
 
-**Olga Gulyakevich**, Frontend Developer
-
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/OlgaGulyakevich)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/olga-gulyakevich/)
+**Olga Gulyakevich**, Frontend Developer<br>[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/OlgaGulyakevich) [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/olga-gulyakevich/)
 
 <br clear="left"/>
