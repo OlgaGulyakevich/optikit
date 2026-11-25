@@ -57,7 +57,7 @@ describe('icon audit --fix', () => {
   it('never pushes the drawing off a tight canvas', async () => {
     // A play-like wedge touching the left, top and bottom edges: its mass sits
     // left of centre, so the correction moves it right — past the right edge
-    // unless the canvas grows (the Telegram icon on Yulia's site, 05.10.2026).
+    // unless the canvas grows (the Telegram icon on a client site, 05.10.2026).
     const input = join(dir, 'wedge.svg');
     await writeFile(input, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 12"><path d="M0 0L14 6L0 12Z"/></svg>');
 

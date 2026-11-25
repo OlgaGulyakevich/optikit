@@ -165,7 +165,7 @@ describe('optical mark', () => {
   });
 
   // An icon next to text is left uncorrected on purpose: the eye measures the
-  // gap to the word, not the centre (Telegram beside a label, Yulia's site).
+  // gap to the word, not the centre (Telegram beside a label on a client site).
   it.each(['none', '0'])('reads data-optical="%s" as "centred on purpose, zero correction"', (value) => {
     expect(readOpticalMark(`<svg data-optical="${value}">`)).toBe(0);
   });

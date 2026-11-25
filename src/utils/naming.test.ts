@@ -70,7 +70,7 @@ describe('buildImageJobs', () => {
 
 describe('toPosixPath', () => {
   it('turns Windows separators into forward slashes', () => {
-    expect(toPosixPath('C:\\Users\\Юля\\клипы (1)\\a.mp4', '\\')).toBe('C:/Users/Юля/клипы (1)/a.mp4');
+    expect(toPosixPath('C:\\Users\\Анна\\клипы (1)\\a.mp4', '\\')).toBe('C:/Users/Анна/клипы (1)/a.mp4');
   });
 
   it('leaves a backslash in a POSIX name alone: there it is a character, not a separator', () => {
