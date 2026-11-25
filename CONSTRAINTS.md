@@ -1,56 +1,36 @@
-# CONSTRAINTS — планка optikit
+# Constraints
 
-> Из шаблона `_стандарты-кода/project-template/CONSTRAINTS.md`. Источник подхода: [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills), скилл `constraint-driven-development` (MIT).
-> Проект — CLI без интерфейса и без URL: строки `axe`, `lighthouse`, Core Web Vitals и бандл убраны — их нечем проверить.
+The quality bar of optikit. Each line is a number and a command, so a machine checks it. The approach comes from the `constraint-driven-development` skill in [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (MIT).
 
-**Зачем этот файл.** Планка выражена **числом и командой**, поэтому её проверяет машина, а не глаза.
+## Always
 
----
+- [ ] No new suppressions: `@ts-ignore`, `@ts-expect-error` without a reason, `eslint-disable`
+- [ ] No stubs: `throw new Error("Not implemented")`, an empty `catch {}`
+- [ ] No test skipped or removed without a reason in the commit message
+- [ ] No secrets in the source
+- [ ] **This file is not weakened to let a change pass.** A threshold is lowered by a decision of its own, with the reason written down
 
-## Floor — действует всегда
+## Blocks a change
 
-- [ ] Нет новых подавлений: `@ts-ignore`, `@ts-expect-error` без пояснения, `eslint-disable`
-- [ ] Нет заглушек: `throw new Error("Not implemented")`, пустой `catch {}`
-- [ ] Нет пропущенных или удалённых тестов без причины в сообщении коммита
-- [ ] Нет секретов в исходниках
-- [ ] 🔴 **Этот файл не ослабляется, чтобы правка прошла.** Порог снижается отдельным решением с обоснованием
+| What | Threshold | Checked by | When |
+| --- | --- | --- | --- |
+| Types | no errors | `tsc --noEmit` | every change |
+| Lint | no errors | `eslint .` | every change |
+| Secrets | nothing found | `gitleaks detect --redact --no-banner` | every change |
+| Tests | all green | `npm test` | end of a task |
+| Vulnerabilities in runtime dependencies | no high or critical | `npm audit --omit=dev --audit-level=high` | before a release |
+| Build | passes, no tests in `dist/` | `npm run build` | before a release |
 
-## Блокирует — с числами
+`--redact` is required: a secret that gitleaks finds must not land in a log or in a chat with an agent.
 
-| Измерение | Порог | Чем проверяется | Когда |
-|-----------|-------|-----------------|-------|
-| Типы | ноль ошибок | `tsc --noEmit` | каждая правка |
-| Линт | ноль error | `eslint .` | каждая правка |
-| Секреты | ничего не найдено | `gitleaks detect --redact --no-banner` | каждая правка |
-| Тесты | сюита зелёная | `npm test` | конец задачи |
-| Уязвимости в runtime-зависимостях | ноль high / critical | `npm audit --omit=dev --audit-level=high` | перед публикацией |
-| Сборка | проходит, `dist/` без тестов | `npm run build` | перед публикацией |
+## Measured, does not block
 
-⚠️ **`--redact` у gitleaks обязателен.** Найденный секрет не должен попасть в переписку с агентом и в лог.
+| Metric | Value (25 Nov 2026) | Direction |
+| --- | --- | --- |
+| Tests | 251 | does not go down |
+| Package size (`npm pack --dry-run`) | 73.9 kB | does not grow without a new command |
+| Runtime dependencies | 7 | does not grow without a reason |
 
-## Измеряем, но не блокируем
+## Exceptions
 
-| Метрика | Сегодня (04.11.2026) | Направление |
-|---------|----------------------|-------------|
-| Тестов | 251 | не должно падать |
-| Размер пакета (`npm pack --dry-run`, package size) | 73.7 kB | не должен расти без новой команды |
-| Runtime-зависимостей | 7 | новая — только по «Дисциплине зависимостей» (`code-review.md`) |
-
-## Исключения
-
-🔴 У каждого исключения — дата истечения.
-
-| ID | Правило | Где | Причина | Истекает |
-|----|---------|-----|---------|----------|
-| — | | | | |
-
----
-
-## Скрипты
-
-```json
-{
-  "check:fast": "tsc --noEmit && eslint . && gitleaks detect --redact --no-banner",
-  "check:full": "npm run check:fast && npm test && npm audit --omit=dev --audit-level=high && npm run build"
-}
-```
+Each one has an end date. None now.
